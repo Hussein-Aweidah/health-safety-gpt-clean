@@ -124,7 +124,10 @@ def run_chat_interface():
         with st.chat_message("user"):
             st.markdown(entry["question"])
         with st.chat_message("assistant"):
-            st.markdown(entry["answer"]) if st.session_state.markdown_mode else st.text(entry["answer"])
+            if st.session_state.markdown_mode:
+                st.markdown(entry["answer"])
+            else:
+                st.text(entry["answer"])
 
             col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
@@ -157,4 +160,4 @@ if st.session_state.show_homepage:
 elif st.session_state.show_settings:
     show_settings_page()
 else:
-    run_chat_interface()
+    run_chat_interface()  # ✅ Only call the function. Do not return or write it!
