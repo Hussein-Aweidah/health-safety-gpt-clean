@@ -6,3 +6,5 @@ deep-translator
 tiktoken
 chromadb
 PyPDF2
+langchain>=0.1.13
+langchain-community
