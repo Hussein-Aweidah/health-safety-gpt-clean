@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from datetime import datetime
-from langchain_community.vectorstores import Chroma
+from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.llms import OpenAI
 from langchain.chains import RetrievalQA
@@ -11,7 +11,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 # --- Config & Paths ---
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-CHROMA_DB_DIR = "chroma_db"
+FAISS_INDEX_DIR = "faiss_index"
 DOCS_DIR = "docs"
 
 # --- Load & Split Documents ---
@@ -29,23 +29,18 @@ text_splitter = RecursiveCharacterTextSplitter(
     chunk_overlap=200
 )
 splits = text_splitter.split_documents(docs)
+texts = [doc.page_content for doc in splits]
+metadatas = [doc.metadata for doc in splits]
 
 # --- Embedding & Vector Store Setup ---
 embedding = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 
-# If we've already built the DB, load it; otherwise create & persist it
-if os.path.isdir(CHROMA_DB_DIR) and os.listdir(CHROMA_DB_DIR):
-    vectordb = Chroma(
-        persist_directory=CHROMA_DB_DIR,
-        embedding_function=embedding
-    )
+# Load FAISS index if exists; otherwise, create and save
+if os.path.isdir(FAISS_INDEX_DIR):
+    vectordb = FAISS.load_local(FAISS_INDEX_DIR, embedding)
 else:
-    vectordb = Chroma.from_documents(
-        documents=splits,
-        embedding_function=embedding,
-        persist_directory=CHROMA_DB_DIR
-    )
-    vectordb.persist()
+    vectordb = FAISS.from_texts(texts=texts, embedding=embedding, metadatas=metadatas)
+    vectordb.save_local(FAISS_INDEX_DIR)
 
 retriever = vectordb.as_retriever(search_kwargs={"k": 5})
 

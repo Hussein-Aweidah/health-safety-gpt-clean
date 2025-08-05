@@ -4,15 +4,11 @@ import streamlit.components.v1 as components
 from rag_pipeline import generate_response
 from user_memory import get_chat_history, save_to_history, get_sessions, load_session
 
-# --- Global Page Config (only once) ---
-st.set_page_config(
-    page_title="Regis",
-    page_icon="🛡️",
-    layout="wide"
-)
+# --- Global Page Config ---
+st.set_page_config(page_title="Regis", page_icon="🛡️", layout="wide")
 
-# --- Initialize session state ---
-for key, default in {
+# --- Init Session State ---
+default_state = {
     "show_homepage": True,
     "show_settings": False,
     "chat_history": [],
@@ -22,11 +18,12 @@ for key, default in {
     "markdown_mode": True,
     "prefill": "",
     "feedback": []
-}.items():
+}
+for key, value in default_state.items():
     if key not in st.session_state:
-        st.session_state[key] = default
+        st.session_state[key] = value
 
-# --- HOMEPAGE VIEW ---
+# --- Homepage View ---
 def show_homepage():
     try:
         st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
@@ -39,6 +36,7 @@ def show_homepage():
         <h1 style='text-align: center; color: #1a1a1a;'>Regis</h1>
         <h4 style='text-align: center; font-weight: normal; color: #444;'>Where Safety Meets Intelligence</h4>
     """, unsafe_allow_html=True)
+
     st.markdown("---")
     st.markdown("""
     ### 🔍 Why Choose Regis?
@@ -54,7 +52,7 @@ def show_homepage():
         st.session_state.prefill = ""
         st.rerun()
 
-# --- SETTINGS PAGE VIEW ---
+# --- Settings View ---
 def show_settings_page():
     st.title("⚙️ Settings")
     st.selectbox("🌐 Language", ["English", "Te Reo Māori", "Tongan", "Samoan"], key="language")
@@ -71,11 +69,11 @@ def show_settings_page():
         st.session_state.show_homepage = True
         st.rerun()
 
-# --- GPT CHAT VIEW ---
+# --- Chat Interface View ---
 def run_chat_interface():
     st.title("💬 Ask Regis — Your Health & Safety Assistant")
 
-    # --- SIDEBAR ---
+    # Sidebar
     with st.sidebar:
         if st.button("🏠 Return to Homepage"):
             st.session_state.show_homepage = True
@@ -100,7 +98,7 @@ def run_chat_interface():
         if st.button("📥 Load Selected"):
             st.session_state.chat_history = load_session(selected)
 
-    # --- CHAT INPUT ---
+    # Chat Input
     user_input = st.chat_input(
         placeholder=st.session_state.prefill or "Ask your health & safety question here…",
         key="chat_input"
@@ -111,51 +109,41 @@ def run_chat_interface():
         with st.spinner("Analyzing your question…"):
             resp, src, sp, ep, ts = generate_response(user_input)
             source_info = f"{src} (pp. {sp}–{ep})"
-            if st.session_state.markdown_mode:
-                formatted = f"{resp}\n\n**Source:** `{source_info}`\n*Timestamp:* {ts}"
-            else:
-                formatted = f"{resp}\n\nSource: {source_info} | Timestamp: {ts}"
+            formatted = (
+                f"{resp}\n\n**Source:** `{source_info}`\n*Timestamp:* {ts}"
+                if st.session_state.markdown_mode else
+                f"{resp}\n\nSource: {source_info} | Timestamp: {ts}"
+            )
 
             st.session_state.chat_history.append({"question": user_input, "answer": formatted})
             save_to_history(user_input, resp, source_info, f"{sp}–{ep}", ts,
                             session_name=st.session_state.session_name)
 
-    # --- CHAT HISTORY + UTILITY BUTTONS ---
+    # Display Chat History
     for idx, entry in enumerate(st.session_state.chat_history):
         with st.chat_message("user"):
             st.markdown(entry["question"])
         with st.chat_message("assistant"):
-            if st.session_state.markdown_mode:
-                st.markdown(entry["answer"])
-            else:
-                st.text(entry["answer"])
+            st.markdown(entry["answer"]) if st.session_state.markdown_mode else st.text(entry["answer"])
 
             col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
 
-            # Copy to clipboard
-            escaped = json.dumps(entry["answer"])
-            copy_js = (
-                "<script>"
-                f"navigator.clipboard.writeText({escaped});"
-                "</script>"
-            )
             if col1.button("📋 Copy", key=f"copy_{idx}"):
-                components.html(copy_js)
+                escaped = json.dumps(entry["answer"])
+                components.html(f"<script>navigator.clipboard.writeText({escaped});</script>")
                 col1.success("Copied!")
 
-            # Regenerate
             if col2.button("🔄 Regenerate", key=f"regen_{idx}"):
                 q = entry["question"]
                 r2, s2, sp2, ep2, t2 = generate_response(q)
                 new_fmt = (
                     f"{r2}\n\n**Source:** `{s2} (pp. {sp2}–{ep2})`\n*Timestamp:* {t2}"
-                    if st.session_state.markdown_mode
-                    else f"{r2}\n\nSource: {s2} (pp. {sp2}–{ep2}) | Timestamp: {t2}"
+                    if st.session_state.markdown_mode else
+                    f"{r2}\n\nSource: {s2} (pp. {sp2}–{ep2}) | Timestamp: {t2}"
                 )
                 st.session_state.chat_history.append({"question": q, "answer": new_fmt})
                 st.rerun()
 
-            # Feedback
             if col3.button("👍", key=f"like_{idx}"):
                 st.session_state.feedback.append((idx, True))
                 col3.success("Thanks!")
@@ -163,11 +151,10 @@ def run_chat_interface():
                 st.session_state.feedback.append((idx, False))
                 col4.warning("Got it!")
 
-# --- ROUTER ---
+# --- Routing ---
 if st.session_state.show_homepage:
     show_homepage()
 elif st.session_state.show_settings:
     show_settings_page()
 else:
     run_chat_interface()
-

@@ -4,7 +4,7 @@ openai
 python-dotenv
 deep-translator
 tiktoken
-chromadb
 pypdf
 langchain>=0.1.13
 langchain-community
+faiss-cpu
