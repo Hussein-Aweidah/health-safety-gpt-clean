@@ -1,0 +1,7 @@
+[theme]
+base="light"
+primaryColor="#009688"               # Voxta green
+backgroundColor="#FFF8ED"            # Light cream background
+secondaryBackgroundColor="#FFFFFF"   # For cards and buttons
+textColor="#000000"                  # Clean dark text
+font="sans serif"
