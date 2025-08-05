@@ -41,7 +41,7 @@ if os.path.isdir(CHROMA_DB_DIR) and os.listdir(CHROMA_DB_DIR):
     )
 else:
     vectordb = Chroma.from_documents(
-        splits,
+        documents=splits,
         embedding_function=embedding,
         persist_directory=CHROMA_DB_DIR
     )
