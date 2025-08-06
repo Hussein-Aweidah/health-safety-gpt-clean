@@ -26,27 +26,32 @@ for key, value in default_state.items():
 # --- Homepage View ---
 def show_homepage():
     try:
-        st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-        st.image("regis_logo.png", width=140)
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(
+            """
+            <div style='display: flex; justify-content: center; align-items: center; margin-top: 60px;'>
+                <img src='https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/assets/regis_logo.png' width='180'/>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     except:
         st.warning("⚠️ Logo could not be loaded.")
 
-    st.markdown("""
-        <h1 style='text-align: center; color: #1a1a1a;'>Regis</h1>
-        <h4 style='text-align: center; font-weight: normal; color: #444;'>Where Safety Meets Intelligence</h4>
-    """, unsafe_allow_html=True)
+    # Horizontal benefits list
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: center; gap: 40px; margin-top: 60px; flex-wrap: wrap; font-size: 18px;">
+            <div>📚 Based on NZ health & safety law</div>
+            <div>🧠 AI-powered answers</div>
+            <div>👷 Role-specific insights</div>
+            <div>📄 Understands official guidelines</div>
+            <div>🕒 Trusted. Timestamped. Traceable.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.markdown("---")
-    st.markdown("""
-    ### 🔍 Why Choose Regis?
-    - 📚 **Based on New Zealand health & safety law**
-    - 🧠 **AI-powered answers to complex workplace scenarios**
-    - 👷 **Role-specific insights**
-    - 📄 **Understands official PDFs and guidelines**
-    - 🕒 **Trusted. Timestamped. Traceable.**
-    """, unsafe_allow_html=True)
-
+    # Chat Start Button
     if st.button("🚀 Start Chat", use_container_width=True):
         st.session_state.show_homepage = False
         st.session_state.prefill = ""
@@ -160,4 +165,4 @@ if st.session_state.show_homepage:
 elif st.session_state.show_settings:
     show_settings_page()
 else:
-    run_chat_interface()  # ✅ Only call the function. Do not return or write it!
+    run_chat_interface()
