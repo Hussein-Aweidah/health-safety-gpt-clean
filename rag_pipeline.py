@@ -46,10 +46,11 @@ else:
     vectordb.save_local(FAISS_INDEX_DIR)
 
 retriever = vectordb.as_retriever(search_kwargs={"k": 5})
+llm = OpenAI(openai_api_key=OPENAI_API_KEY)
 
 # --- Retrieval QA chain ---
 qa_chain = RetrievalQA.from_chain_type(
-    llm=OpenAI(openai_api_key=OPENAI_API_KEY),
+    llm=llm,
     retriever=retriever,
     return_source_documents=True
 )
@@ -61,6 +62,7 @@ def get_answer(query: str):
       - list of source filenames
       - start and end page numbers
       - timestamp
+    Falls back to GPT if no good context is found.
     """
     result = qa_chain(query)
     answer = result["result"]
@@ -77,6 +79,17 @@ def get_answer(query: str):
             pages.append(int(pg))
         except (TypeError, ValueError):
             pass
+
+    # Determine if we need to fallback
+    fallback_needed = (
+        not docs or
+        answer.strip().lower() in ["i don't know", "i am not sure", "no relevant information found"]
+    )
+
+    if fallback_needed:
+        answer = llm.invoke(query)
+        sources = []
+        pages = []
 
     start_page = min(pages) if pages else None
     end_page = max(pages) if pages else None
