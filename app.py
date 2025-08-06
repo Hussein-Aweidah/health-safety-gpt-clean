@@ -25,18 +25,22 @@ for key, value in default_state.items():
 
 # --- Homepage View ---
 def show_homepage():
-    st.markdown(
-        """
-        <div style='display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 60vh;'>
-            <img src='static/e95de6ab-1c0e-4099-b1c0-973c0f381b22.png' width='200' style='border-radius: 16px;'/>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    try:
+        st.markdown(
+            """
+            <div style='display: flex; justify-content: center; align-items: center; margin-top: 60px;'>
+                <img src='assets/regis_logo.png' width='200'/>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+    except:
+        st.warning("⚠️ Logo could not be loaded.")
 
+    # Horizontal benefits list
     st.markdown(
         """
-        <div style="display: flex; justify-content: center; gap: 40px; margin-top: 40px; flex-wrap: wrap; font-size: 18px;">
+        <div style="display: flex; justify-content: center; gap: 40px; margin-top: 60px; flex-wrap: wrap; font-size: 18px;">
             <div>📚 Based on NZ health & safety law</div>
             <div>🧠 AI-powered answers</div>
             <div>👷 Role-specific insights</div>
