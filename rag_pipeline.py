@@ -8,6 +8,8 @@ from langchain_community.llms import OpenAI
 from langchain.chains import RetrievalQA
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores.utils import DistanceStrategy
+from langchain_core.vectorstores import VectorStoreConfig
 
 # --- Load API key ---
 load_dotenv()
@@ -36,9 +38,10 @@ metadatas = [doc.metadata for doc in splits]
 
 # --- Embedding & FAISS setup ---
 embedding = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
+config = VectorStoreConfig(embedding=embedding, distance_strategy=DistanceStrategy.COSINE)
 
 if os.path.isdir(FAISS_INDEX_DIR):
-    vectordb = FAISS.load_local(FAISS_INDEX_DIR, embeddings=embedding)
+    vectordb = FAISS.load_local(FAISS_INDEX_DIR, config=config)
 else:
     vectordb = FAISS.from_texts(texts=texts, embedding=embedding, metadatas=metadatas)
     vectordb.save_local(FAISS_INDEX_DIR)
@@ -95,7 +98,7 @@ def get_answer(query: str):
     start_page = min(pages) if pages else None
     end_page = max(pages) if pages else None
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+    
     return answer, sorted(sources), start_page, end_page, timestamp
 
 # --- Generate response for app.py ---
