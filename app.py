@@ -26,32 +26,28 @@ for key, value in default_state.items():
 # --- Homepage View ---
 def show_homepage():
     try:
-        st.markdown(
-            """
-            <div style='display: flex; justify-content: center; align-items: center; margin-top: 60px;'>
-                <img src='https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/assets/regis_logo.png' width='180'/>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+        st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+        st.image("regis_logo.png", width=240)
+        st.markdown("</div>", unsafe_allow_html=True)
     except:
         st.warning("⚠️ Logo could not be loaded.")
 
-    # Horizontal benefits list
-    st.markdown(
-        """
-        <div style="display: flex; justify-content: center; gap: 40px; margin-top: 60px; flex-wrap: wrap; font-size: 18px;">
-            <div>📚 Based on NZ health & safety law</div>
-            <div>🧠 AI-powered answers</div>
-            <div>👷 Role-specific insights</div>
-            <div>📄 Understands official guidelines</div>
-            <div>🕒 Trusted. Timestamped. Traceable.</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    st.markdown("---")
 
-    # Chat Start Button
+    features = [
+        ("📚", "Based on NZ health & safety law"),
+        ("🧠", "AI-powered answers"),
+        ("👷", "Role-specific insights"),
+        ("📄", "Understands official guidelines"),
+        ("🕒", "Trusted. Timestamped. Traceable."),
+    ]
+
+    cols = st.columns(len(features))
+    for col, (icon, text) in zip(cols, features):
+        col.markdown(f"<div style='text-align: center; font-size: 18px;'>{icon}<br>{text}</div>", unsafe_allow_html=True)
+
+    st.markdown("")
+
     if st.button("🚀 Start Chat", use_container_width=True):
         st.session_state.show_homepage = False
         st.session_state.prefill = ""
