@@ -9,12 +9,11 @@ from langchain.chains import RetrievalQA
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-# --- Load .env and get API key ---
+# --- Load API key ---
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
 if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY not found. Make sure it's set in your environment or Streamlit secrets.")
+    raise ValueError("OPENAI_API_KEY not found. Set it in your .env or Streamlit secrets.")
 
 # --- Paths ---
 FAISS_INDEX_DIR = "faiss_index"
@@ -35,10 +34,9 @@ splits = text_splitter.split_documents(docs)
 texts = [doc.page_content for doc in splits]
 metadatas = [doc.metadata for doc in splits]
 
-# --- Embedding model ---
+# --- Embedding & FAISS setup ---
 embedding = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 
-# --- FAISS index load or create ---
 if os.path.isdir(FAISS_INDEX_DIR):
     vectordb = FAISS.load_local(FAISS_INDEX_DIR, embedding)
 else:
@@ -46,23 +44,17 @@ else:
     vectordb.save_local(FAISS_INDEX_DIR)
 
 retriever = vectordb.as_retriever(search_kwargs={"k": 5})
-llm = OpenAI(openai_api_key=OPENAI_API_KEY)
-
-# --- Retrieval QA chain ---
 qa_chain = RetrievalQA.from_chain_type(
-    llm=llm,
+    llm=OpenAI(openai_api_key=OPENAI_API_KEY),
     retriever=retriever,
     return_source_documents=True
 )
 
+# --- Answer with fallback ---
 def get_answer(query: str):
     """
-    Run the QA chain and extract:
-      - answer text
-      - list of source filenames
-      - start and end page numbers
-      - timestamp
-    Falls back to GPT if no good context is found.
+    Uses documents first, then GPT if irrelevant.
+    Returns: answer, sources[], start_page, end_page, timestamp
     """
     result = qa_chain(query)
     answer = result["result"]
@@ -80,13 +72,22 @@ def get_answer(query: str):
         except (TypeError, ValueError):
             pass
 
-    # Determine if we need to fallback
+    # Detect fallback
+    fallback_phrases = [
+        "i don't know",
+        "i am not sure",
+        "i'm sorry, but i don't know",
+        "no relevant information",
+        "as it is unrelated to the context"
+    ]
     fallback_needed = (
         not docs or
-        answer.strip().lower() in ["i don't know", "i am not sure", "no relevant information found"]
+        any(phrase in answer.strip().lower() for phrase in fallback_phrases)
     )
 
+    # Use GPT directly if fallback needed
     if fallback_needed:
+        llm = OpenAI(openai_api_key=OPENAI_API_KEY)
         answer = llm.invoke(query)
         sources = []
         pages = []
@@ -97,10 +98,10 @@ def get_answer(query: str):
     
     return answer, sorted(sources), start_page, end_page, timestamp
 
+# --- Generate response for app.py ---
 def generate_response(query: str):
     """
-    Returns a 5‑tuple for app.py:
-      (answer, source_list_str, start_page_str, end_page_str, timestamp)
+    Return: (answer, source string, start page str, end page str, timestamp)
     """
     answer, sources, start_page, end_page, timestamp = get_answer(query)
     source_list = ", ".join(sources) if sources else "Unknown"
