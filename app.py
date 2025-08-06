@@ -27,16 +27,13 @@ for key, value in default_state.items():
 def show_homepage():
     st.markdown(
         """
-        <div style='display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh;'>
-            <img src='https://raw.githubusercontent.com/Hussein-Aweidah/health-safety-gpt-clean/main/static/regis_logo.png' width='200' style='border-radius: 16px; margin-bottom: 20px;'/>
-            <h1 style='margin-top: 0; font-family: sans-serif;'>REGIS</h1>
-            <p style='margin-top: -10px; color: gray;'>Your Guide to Safer Workplaces</p>
+        <div style='display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 60vh;'>
+            <img src='static/e95de6ab-1c0e-4099-b1c0-973c0f381b22.png' width='200' style='border-radius: 16px;'/>
         </div>
         """,
         unsafe_allow_html=True
     )
 
-    # Horizontal features row
     st.markdown(
         """
         <div style="display: flex; justify-content: center; gap: 40px; margin-top: 40px; flex-wrap: wrap; font-size: 18px;">
@@ -50,7 +47,6 @@ def show_homepage():
         unsafe_allow_html=True
     )
 
-    # Start button
     if st.button("🚀 Start Chat", use_container_width=True):
         st.session_state.show_homepage = False
         st.session_state.prefill = ""
