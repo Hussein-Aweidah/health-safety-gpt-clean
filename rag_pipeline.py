@@ -8,8 +8,6 @@ from langchain_community.llms import OpenAI
 from langchain.chains import RetrievalQA
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores.utils import DistanceStrategy
-from langchain_core.vectorstores import VectorStoreConfig
 
 # --- Load API key ---
 load_dotenv()
@@ -38,11 +36,10 @@ metadatas = [doc.metadata for doc in splits]
 
 # --- Embedding & FAISS setup ---
 embedding = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
-config = VectorStoreConfig(embedding=embedding, distance_strategy=DistanceStrategy.COSINE)
 
-if os.path.isdir(FAISS_INDEX_DIR):
-    vectordb = FAISS.load_local(FAISS_INDEX_DIR, config=config)
-else:
+try:
+    vectordb = FAISS.load_local(FAISS_INDEX_DIR, embeddings=embedding)
+except Exception:
     vectordb = FAISS.from_texts(texts=texts, embedding=embedding, metadatas=metadatas)
     vectordb.save_local(FAISS_INDEX_DIR)
 
@@ -55,10 +52,6 @@ qa_chain = RetrievalQA.from_chain_type(
 
 # --- Answer with fallback ---
 def get_answer(query: str):
-    """
-    Uses documents first, then GPT if irrelevant.
-    Returns: answer, sources[], start_page, end_page, timestamp
-    """
     result = qa_chain(query)
     answer = result["result"]
     docs = result["source_documents"]
@@ -75,7 +68,7 @@ def get_answer(query: str):
         except (TypeError, ValueError):
             pass
 
-    # Detect fallback
+    # Fallback detection
     fallback_phrases = [
         "i don't know",
         "i am not sure",
@@ -103,9 +96,6 @@ def get_answer(query: str):
 
 # --- Generate response for app.py ---
 def generate_response(query: str):
-    """
-    Return: (answer, source string, start page str, end page str, timestamp)
-    """
     answer, sources, start_page, end_page, timestamp = get_answer(query)
     source_list = ", ".join(sources) if sources else "Unknown"
     sp = str(start_page) if start_page is not None else "N/A"
