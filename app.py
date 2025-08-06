@@ -29,7 +29,7 @@ def show_homepage():
         st.markdown(
             """
             <div style='display: flex; justify-content: center; align-items: center; margin-top: 60px;'>
-                <img src='assets/regis_logo.png' width='200'/>
+                <img src='regis_logo.png' width='180'/>
             </div>
             """,
             unsafe_allow_html=True
@@ -51,6 +51,7 @@ def show_homepage():
         unsafe_allow_html=True
     )
 
+    # Chat Start Button
     if st.button("🚀 Start Chat", use_container_width=True):
         st.session_state.show_homepage = False
         st.session_state.prefill = ""
