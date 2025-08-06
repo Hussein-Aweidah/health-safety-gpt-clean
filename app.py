@@ -25,29 +25,32 @@ for key, value in default_state.items():
 
 # --- Homepage View ---
 def show_homepage():
-    try:
-        st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-        st.image("regis_logo.png", width=240)
-        st.markdown("</div>", unsafe_allow_html=True)
-    except:
-        st.warning("⚠️ Logo could not be loaded.")
+    st.markdown(
+        """
+        <div style='display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh;'>
+            <img src='https://raw.githubusercontent.com/Hussein-Aweidah/health-safety-gpt-clean/main/static/regis_logo.png' width='200' style='border-radius: 16px; margin-bottom: 20px;'/>
+            <h1 style='margin-top: 0; font-family: sans-serif;'>REGIS</h1>
+            <p style='margin-top: -10px; color: gray;'>Your Guide to Safer Workplaces</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    st.markdown("---")
+    # Horizontal features row
+    st.markdown(
+        """
+        <div style="display: flex; justify-content: center; gap: 40px; margin-top: 40px; flex-wrap: wrap; font-size: 18px;">
+            <div>📚 Based on NZ health & safety law</div>
+            <div>🧠 AI-powered answers</div>
+            <div>👷 Role-specific insights</div>
+            <div>📄 Understands official guidelines</div>
+            <div>🕒 Trusted. Timestamped. Traceable.</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
-    features = [
-        ("📚", "Based on NZ health & safety law"),
-        ("🧠", "AI-powered answers"),
-        ("👷", "Role-specific insights"),
-        ("📄", "Understands official guidelines"),
-        ("🕒", "Trusted. Timestamped. Traceable."),
-    ]
-
-    cols = st.columns(len(features))
-    for col, (icon, text) in zip(cols, features):
-        col.markdown(f"<div style='text-align: center; font-size: 18px;'>{icon}<br>{text}</div>", unsafe_allow_html=True)
-
-    st.markdown("")
-
+    # Start button
     if st.button("🚀 Start Chat", use_container_width=True):
         st.session_state.show_homepage = False
         st.session_state.prefill = ""
