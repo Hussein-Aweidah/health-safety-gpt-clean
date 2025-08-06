@@ -38,7 +38,7 @@ metadatas = [doc.metadata for doc in splits]
 embedding = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
 
 if os.path.isdir(FAISS_INDEX_DIR):
-    vectordb = FAISS.load_local(FAISS_INDEX_DIR, embedding)
+    vectordb = FAISS.load_local(FAISS_INDEX_DIR, embeddings=embedding)
 else:
     vectordb = FAISS.from_texts(texts=texts, embedding=embedding, metadatas=metadatas)
     vectordb.save_local(FAISS_INDEX_DIR)
@@ -95,7 +95,7 @@ def get_answer(query: str):
     start_page = min(pages) if pages else None
     end_page = max(pages) if pages else None
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
+
     return answer, sorted(sources), start_page, end_page, timestamp
 
 # --- Generate response for app.py ---
