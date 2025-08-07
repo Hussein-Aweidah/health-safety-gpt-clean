@@ -33,7 +33,7 @@ def show_homepage():
             encoded = base64.b64encode(image_file.read()).decode()
 
         # Shift logo slightly to the right using column ratios
-        col1, col2, col3 = st.columns([0.5, 2.5, 1])
+        col1, col2, col3 = st.columns([1, 2.5, 1])
         with col2:
             st.markdown(f"""
                 <div style='text-align: center; margin-top: 20px;'>
