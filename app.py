@@ -24,18 +24,25 @@ for key, value in default_state.items():
         st.session_state[key] = value
 
 # --- Homepage View ---
+import base64
+
 def show_homepage():
     try:
+        # Load and encode the image in base64
+        with open("regis_logo.png", "rb") as image_file:
+            encoded = base64.b64encode(image_file.read()).decode()
+
         # Shift logo slightly to the right using column ratios
         col1, col2, col3 = st.columns([0.5, 2.5, 1])
         with col2:
-            st.markdown("""
+            st.markdown(f"""
                 <div style='text-align: center; margin-top: 20px;'>
-                    <img src='regis_logo.png' style='max-width: 100%; width: 20vw; height: auto;' />
+                    <img src='data:image/png;base64,{encoded}' style='max-width: 100%; width: 20vw; height: auto;' />
                 </div>
             """, unsafe_allow_html=True)
     except Exception as e:
         st.warning(f"⚠️ Logo could not be loaded: {e}")
+
 
 
     # Horizontal benefits list
