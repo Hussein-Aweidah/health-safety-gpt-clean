@@ -26,9 +26,11 @@ for key, value in default_state.items():
 # --- Homepage View ---
 def show_homepage():
     try:
-        st.markdown("<div style='text-align:center; margin-top: 60px;'>", unsafe_allow_html=True)
-        st.image("regis_logo.png", width=180)
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("""
+            <div style='text-align: center; margin-top: 60px;'>
+                <img src='regis_logo.png' width='180'/>
+            </div>
+        """, unsafe_allow_html=True)
     except Exception as e:
         st.warning(f"⚠️ Logo could not be loaded: {e}")
 
