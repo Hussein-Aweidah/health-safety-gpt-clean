@@ -27,11 +27,16 @@ for key, value in default_state.items():
 def show_homepage():
     try:
         # Shift logo slightly to the right using column ratios
-        col1, col2, col3 = st.columns([0.8, 2.2, 1])
+        col1, col2, col3 = st.columns([0.5, 2.5, 1])
         with col2:
-            st.image("regis_logo.png", width=180)
+            st.markdown("""
+                <div style='text-align: center; margin-top: 20px;'>
+                    <img src='regis_logo.png' style='max-width: 100%; width: 20vw; height: auto;' />
+                </div>
+            """, unsafe_allow_html=True)
     except Exception as e:
         st.warning(f"⚠️ Logo could not be loaded: {e}")
+
 
     # Horizontal benefits list
     st.markdown(
