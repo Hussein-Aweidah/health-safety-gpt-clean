@@ -26,8 +26,8 @@ for key, value in default_state.items():
 # --- Homepage View ---
 def show_homepage():
     try:
-        # Center the image using Streamlit columns
-        col1, col2, col3 = st.columns([1, 2, 1])
+        # Shift logo slightly to the right using column ratios
+        col1, col2, col3 = st.columns([0.8, 2.2, 1])
         with col2:
             st.image("regis_logo.png", width=180)
     except Exception as e:
