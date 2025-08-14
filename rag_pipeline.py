@@ -1,100 +1,106 @@
 import os
-from dotenv import load_dotenv
 from datetime import datetime
+from dotenv import load_dotenv
 
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import OpenAIEmbeddings
-from langchain_community.llms import OpenAI
-from langchain.chains import RetrievalQA
-from langchain.document_loaders import PyPDFLoader
+from glob import glob
+from langchain_community.document_loaders import PyMuPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import FAISS
+from langchain.chains import RetrievalQA
+from langchain.schema import Document
 
-# --- Load API key ---
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     raise ValueError("OPENAI_API_KEY not found. Set it in your .env or Streamlit secrets.")
 
-# --- Paths ---
 FAISS_INDEX_DIR = "faiss_index"
 DOCS_DIR = "docs"
 
-# --- Load and split documents ---
-loaders = [
-    PyPDFLoader(os.path.join(DOCS_DIR, fn))
-    for fn in os.listdir(DOCS_DIR)
-    if fn.lower().endswith(".pdf")
-]
-docs = []
-for loader in loaders:
-    docs.extend(loader.load())
+def _faiss_exists() -> bool:
+    return os.path.isdir(FAISS_INDEX_DIR) and any(
+        name.endswith(".faiss") or name.endswith(".pkl")
+        for name in os.listdir(FAISS_INDEX_DIR)
+    )
 
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-splits = text_splitter.split_documents(docs)
-texts = [doc.page_content for doc in splits]
-metadatas = [doc.metadata for doc in splits]
+def _build_faiss_from_docs():
+    pdfs = sorted(set(glob(os.path.join(DOCS_DIR, "*.pdf")) +
+                      glob(os.path.join(DOCS_DIR, "**/*.pdf"), recursive=True)))
+    if not pdfs:
+        return
+    splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=120)
+    chunks = []
+    for path in pdfs:
+        pages = PyMuPDFLoader(path).load()
+        for d in pages:
+            for i, c in enumerate(splitter.split_text(d.page_content)):
+                m = d.metadata.copy()
+                m["source_path"] = path
+                m["chunk_index"] = i
+                chunks.append(Document(page_content=c, metadata=m))
+    embeddings = OpenAIEmbeddings()
+    db = FAISS.from_documents(chunks, embeddings)
+    db.save_local(FAISS_INDEX_DIR)
 
-# --- Embedding & FAISS setup ---
-embedding = OpenAIEmbeddings(openai_api_key=OPENAI_API_KEY)
+def _get_retriever(k: int = 5):
+    if not _faiss_exists():
+        _build_faiss_from_docs()
+    embeddings = OpenAIEmbeddings()
+    db = FAISS.load_local(
+        FAISS_INDEX_DIR,
+        embeddings,
+        allow_dangerous_deserialization=True
+    )
+    return db.as_retriever(search_kwargs={"k": k})
 
-try:
-    vectordb = FAISS.load_local(FAISS_INDEX_DIR, embeddings=embedding)
-except Exception:
-    vectordb = FAISS.from_texts(texts=texts, embedding=embedding, metadatas=metadatas)
-    vectordb.save_local(FAISS_INDEX_DIR)
+def _get_qa_chain():
+    retriever = _get_retriever(k=8)
+    llm = ChatOpenAI(temperature=0)
+    return RetrievalQA.from_chain_type(
+        llm=llm,
+        retriever=retriever,
+        return_source_documents=True
+    )
 
-retriever = vectordb.as_retriever(search_kwargs={"k": 5})
-qa_chain = RetrievalQA.from_chain_type(
-    llm=OpenAI(openai_api_key=OPENAI_API_KEY),
-    retriever=retriever,
-    return_source_documents=True
-)
-
-# --- Answer with fallback ---
 def get_answer(query: str):
-    result = qa_chain(query)
+    qa_chain = _get_qa_chain()
+    result = qa_chain.invoke({"query": query})
     answer = result["result"]
-    docs = result["source_documents"]
+    src_docs = result.get("source_documents", [])
 
     sources = set()
     pages = []
-    for doc in docs:
-        md = doc.metadata
-        src = os.path.basename(md.get("source", "Unknown"))
-        pg = md.get("page", None)
+    for doc in src_docs:
+        md = doc.metadata or {}
+        src = os.path.basename(md.get("source") or md.get("source_path") or "Unknown")
+        pg = md.get("page")
         sources.add(src)
         try:
             pages.append(int(pg))
         except (TypeError, ValueError):
             pass
 
-    # Fallback detection
     fallback_phrases = [
         "i don't know",
         "i am not sure",
         "i'm sorry, but i don't know",
         "no relevant information",
-        "as it is unrelated to the context"
+        "as it is unrelated to the context",
     ]
-    fallback_needed = (
-        not docs or
-        any(phrase in answer.strip().lower() for phrase in fallback_phrases)
-    )
+    fallback_needed = (not src_docs) or any(p in answer.strip().lower() for p in fallback_phrases)
 
-    # Use GPT directly if fallback needed
     if fallback_needed:
-        llm = OpenAI(openai_api_key=OPENAI_API_KEY)
-        answer = llm.invoke(query)
+        llm = ChatOpenAI(temperature=0)
+        answer = llm.invoke(query).content
         sources = []
         pages = []
 
     start_page = min(pages) if pages else None
     end_page = max(pages) if pages else None
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
     return answer, sorted(sources), start_page, end_page, timestamp
 
-# --- Generate response for app.py ---
 def generate_response(query: str):
     answer, sources, start_page, end_page, timestamp = get_answer(query)
     source_list = ", ".join(sources) if sources else "Unknown"

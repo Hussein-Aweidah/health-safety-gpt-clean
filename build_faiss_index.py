@@ -1,31 +1,36 @@
 # build_faiss_index.py
 import os
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import OpenAIEmbeddings
-from langchain.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-# Load .env if needed
+from glob import glob
 from dotenv import load_dotenv
+
+from langchain_community.document_loaders import PyMuPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.schema import Document
+
 load_dotenv()
 
-# Constants
 DOCS_DIR = "docs"
 FAISS_INDEX_DIR = "faiss_index"
 
-# Load PDFs
-loaders = [PyPDFLoader(os.path.join(DOCS_DIR, file))
-           for file in os.listdir(DOCS_DIR) if file.endswith(".pdf")]
+pdf_paths = sorted(set(glob(os.path.join(DOCS_DIR, "*.pdf")) +
+                       glob(os.path.join(DOCS_DIR, "**/*.pdf"), recursive=True)))
+
+splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=120)
+
 docs = []
-for loader in loaders:
-    docs.extend(loader.load())
+for path in pdf_paths:
+    pages = PyMuPDFLoader(path).load()
+    for d in pages:
+        for i, chunk in enumerate(splitter.split_text(d.page_content)):
+            meta = d.metadata.copy()
+            meta["source_path"] = path
+            meta["chunk_index"] = i
+            docs.append(Document(page_content=chunk, metadata=meta))
 
-# Split documents
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-splits = text_splitter.split_documents(docs)
+embeddings = OpenAIEmbeddings()
+db = FAISS.from_documents(docs, embeddings)
+db.save_local(FAISS_INDEX_DIR)
 
-# Embed and store in FAISS
-embedding = OpenAIEmbeddings()
-vectordb = FAISS.from_documents(splits, embedding)
-vectordb.save_local(FAISS_INDEX_DIR)
-print(f"✅ FAISS index saved to {FAISS_INDEX_DIR}")
+print(f"✅ FAISS index saved to {FAISS_INDEX_DIR} | {len(docs)} chunks from {len(pdf_paths)} PDFs")
