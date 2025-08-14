@@ -8,3 +8,6 @@ pypdf
 langchain>=0.1.13
 langchain-community
 faiss-cpu
+langchain-openai
+langchain-community
+pymupdf
