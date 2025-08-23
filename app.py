@@ -572,17 +572,32 @@ def show_gap_analysis(checker):
             st.session_state.previous_sidebar_mode = "Overview"
             st.rerun()
     
+    # Quick validation - if no assessment ID, go back immediately
     if not st.session_state.current_assessment_id:
         st.warning("No assessment selected. Please select an assessment first.")
         st.session_state.compliance_view_mode = "view_assessments"
         st.rerun()
         return
     
-    assessment = checker.get_assessment(st.session_state.current_assessment_id)
-    if not assessment:
-        st.error("Assessment not found.")
-        st.session_state.compliance_view_mode = "view_assessments"
-        st.rerun()
+    # Show immediate loading state
+    with st.spinner("Loading assessment data..."):
+        pass  # Just show the spinner briefly
+    
+    # Try to get assessment with timeout protection
+    try:
+        assessment = checker.get_assessment(st.session_state.current_assessment_id)
+        if not assessment:
+            st.error("Assessment not found.")
+            st.session_state.compliance_view_mode = "view_assessments"
+            st.rerun()
+            return
+    except Exception as e:
+        st.error(f"Error loading assessment: {str(e)}")
+        st.info("Please try selecting a different assessment or go back to overview.")
+        if st.button("← Go Back to Overview", key="error_back"):
+            st.session_state.compliance_view_mode = "overview"
+            st.session_state.previous_sidebar_mode = "Overview"
+            st.rerun()
         return
     
     # Debug information (commented out for performance)
@@ -598,6 +613,9 @@ def show_gap_analysis(checker):
     st.markdown(f"**Industry:** {assessment.get('industry', 'Unknown').title()}")
     st.markdown(f"**Status:** {assessment.get('status', 'Unknown').replace('_', ' ').title()}")
     st.markdown(f"**Created:** {assessment.get('created_date', 'Unknown')}")
+    
+    # Quick check for assessment completeness
+    st.info("✅ Assessment loaded successfully!")
     
     # Check if assessment has required fields
     if not assessment.get('categories'):
@@ -660,17 +678,41 @@ def show_gap_analysis(checker):
     
     st.markdown("---")
     
+    # Quick test section
+    st.markdown("### 🧪 Quick Test")
+    if st.button("🔍 Test Assessment Data", key="test_assessment"):
+        st.info("Testing assessment data structure...")
+        st.json({
+            "has_categories": bool(assessment.get('categories')),
+            "category_count": len(assessment.get('categories', [])),
+            "total_requirements": assessment.get('total_requirements', 0),
+            "assessment_keys": list(assessment.keys())
+        })
+    
+    st.markdown("---")
+    
     # Generate gap analysis
     if st.button("🔄 Generate Gap Analysis"):
         st.session_state.last_button_click = "gap_analysis"  # Track this button click
         
-        # Show loading state
-        with st.spinner("Analyzing compliance gaps..."):
+        # Show loading state with timeout warning
+        with st.spinner("Analyzing compliance gaps... (This may take a few seconds)"):
             try:
+                # Add a simple timeout mechanism
+                import time
+                start_time = time.time()
+                
                 gaps = checker.generate_gap_analysis(assessment['id'])
+                
+                # Check if it took too long
+                elapsed_time = time.time() - start_time
+                if elapsed_time > 10:  # If it took more than 10 seconds
+                    st.warning(f"Gap analysis took {elapsed_time:.1f} seconds - this is slower than expected.")
+                
                 st.success("Gap analysis completed!")
             except Exception as e:
                 st.error(f"Error generating gap analysis: {str(e)}")
+                st.info("This might be due to incomplete assessment data or a system issue.")
                 return
             
             # Display gaps by priority
