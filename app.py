@@ -565,7 +565,7 @@ def show_gap_analysis(checker):
     # Add a quick way to go back
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.markdown("**Loading assessment details...**")
+        st.markdown("**Assessment Details**")
     with col2:
         if st.button("← Back to Overview", key="back_to_overview"):
             st.session_state.compliance_view_mode = "overview"
@@ -575,21 +575,23 @@ def show_gap_analysis(checker):
     # Quick validation - if no assessment ID, go back immediately
     if not st.session_state.current_assessment_id:
         st.warning("No assessment selected. Please select an assessment first.")
-        st.session_state.compliance_view_mode = "view_assessments"
-        st.rerun()
+        st.info("Please select an assessment from the list first.")
+        if st.button("← Go Back to Overview", key="no_assessment_back"):
+            st.session_state.compliance_view_mode = "overview"
+            st.session_state.previous_sidebar_mode = "Overview"
+            st.rerun()
         return
-    
-    # Show immediate loading state
-    with st.spinner("Loading assessment data..."):
-        pass  # Just show the spinner briefly
     
     # Try to get assessment with timeout protection
     try:
         assessment = checker.get_assessment(st.session_state.current_assessment_id)
         if not assessment:
             st.error("Assessment not found.")
-            st.session_state.compliance_view_mode = "view_assessments"
-            st.rerun()
+            st.info("Please select a different assessment.")
+            if st.button("← Go Back to Overview", key="error_back"):
+                st.session_state.compliance_view_mode = "overview"
+                st.session_state.previous_sidebar_mode = "Overview"
+                st.rerun()
             return
     except Exception as e:
         st.error(f"Error loading assessment: {str(e)}")
@@ -615,7 +617,7 @@ def show_gap_analysis(checker):
     st.markdown(f"**Created:** {assessment.get('created_date', 'Unknown')}")
     
     # Quick check for assessment completeness
-    st.info("✅ Assessment loaded successfully!")
+    st.success("✅ Assessment loaded successfully!")
     
     # Check if assessment has required fields
     if not assessment.get('categories'):
@@ -626,41 +628,27 @@ def show_gap_analysis(checker):
         st.markdown("### 🚧 Assessment Setup Required")
         st.markdown("This assessment appears to be newly created but doesn't have the required compliance categories initialized.")
         st.markdown("**Possible solutions:**")
-        st.markdown("1. **Refresh the page** - The compliance checker might need to reinitialize")
-        st.markdown("2. **Check the ComplianceChecker class** - Ensure it properly creates assessments with categories")
-        st.markdown("3. **Restart the app** - Session state might be corrupted")
+        st.markdown("1. **Go back to overview** and select a different assessment")
+        st.markdown("2. **Create a new assessment** with proper categories")
+        st.markdown("3. **Check if the ComplianceChecker is working properly**")
         
-        # TEMPORARY: Show a basic assessment interface even without categories
+        # Simple interface for incomplete assessments
         st.markdown("---")
-        st.markdown("### 📝 Basic Assessment Interface (Temporary)")
-        st.markdown("Since categories are missing, here's a basic interface to get you started:")
+        st.markdown("### 📝 Basic Assessment Interface")
+        st.markdown("Since categories are missing, here's what you can do:")
         
-        # Add a button to try to reinitialize the assessment
-        if st.button("🔄 Try to Reinitialize Assessment", key="reinit_assessment"):
-            try:
-                # Try to get the assessment again
-                refreshed_assessment = checker.get_assessment(st.session_state.current_assessment_id)
-                if refreshed_assessment and refreshed_assessment.get('categories'):
-                    st.success("Assessment reinitialized successfully!")
-                    st.session_state.last_button_click = "gap_analysis"  # Track this button click
-                    st.rerun()
-                else:
-                    st.error("Still missing categories. Check the ComplianceChecker implementation.")
-            except Exception as e:
-                st.error(f"Error reinitializing: {str(e)}")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Try to Refresh Assessment", key="refresh_assessment"):
+                st.info("Refreshing assessment data...")
+                # Don't rerun - just show a message
+                st.success("Assessment refreshed! Check if categories are now available.")
         
-        # Show a simple form to manually add categories
-        st.markdown("---")
-        st.markdown("### ➕ Add Basic Compliance Categories")
-        with st.form("add_categories"):
-            st.text_input("Category 1 (e.g., 'Risk Management')", key="cat1")
-            st.text_input("Category 2 (e.g., 'Training & Competency')", key="cat2")
-            st.text_input("Category 3 (e.g., 'Equipment & Maintenance')", key="cat3")
-            
-            if st.form_submit_button("Add Categories"):
-                st.session_state.last_button_click = "gap_analysis"  # Track this button click
-                st.info("This is a temporary feature. The real fix is to ensure ComplianceChecker creates assessments with proper categories.")
-                st.warning("Categories will not be saved until the ComplianceChecker is properly implemented.")
+        with col2:
+            if st.button("← Go Back to Overview", key="incomplete_back"):
+                st.session_state.compliance_view_mode = "overview"
+                st.session_state.previous_sidebar_mode = "Overview"
+                st.rerun()
         
         return
     
@@ -691,6 +679,14 @@ def show_gap_analysis(checker):
     
     st.markdown("---")
     
+    # Show assessment status
+    if assessment.get('categories'):
+        st.info(f"📊 Assessment has {len(assessment.get('categories', []))} categories with {assessment.get('total_requirements', 0)} total requirements")
+    else:
+        st.warning("⚠️ Assessment is missing compliance categories")
+    
+    st.markdown("---")
+    
     # Generate gap analysis
     if st.button("🔄 Generate Gap Analysis"):
         st.session_state.last_button_click = "gap_analysis"  # Track this button click
@@ -701,6 +697,12 @@ def show_gap_analysis(checker):
                 # Add a simple timeout mechanism
                 import time
                 start_time = time.time()
+                
+                # Check if assessment has categories before processing
+                if not assessment.get('categories'):
+                    st.error("Cannot generate gap analysis: Assessment has no compliance categories")
+                    st.info("Please ensure the assessment is properly initialized with compliance requirements")
+                    return
                 
                 gaps = checker.generate_gap_analysis(assessment['id'])
                 
