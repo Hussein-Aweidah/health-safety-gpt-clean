@@ -303,13 +303,19 @@ def show_compliance_interface():
     
     # Main content based on mode - use the internal view mode
     try:
+        st.sidebar.markdown(f"**Debug:** About to show mode: {st.session_state.compliance_view_mode}")
+        
         if st.session_state.compliance_view_mode == "overview":
+            st.sidebar.markdown("**Debug:** Showing overview")
             show_compliance_overview(checker)
         elif st.session_state.compliance_view_mode == "new_assessment":
+            st.sidebar.markdown("**Debug:** Showing new assessment form")
             show_new_assessment_form(checker)
         elif st.session_state.compliance_view_mode == "view_assessments":
+            st.sidebar.markdown("**Debug:** Showing assessments list")
             show_assessments_list(checker)
         elif st.session_state.compliance_view_mode == "gap_analysis":
+            st.sidebar.markdown("**Debug:** Showing gap analysis")
             show_gap_analysis(checker)
         else:
             st.error(f"Unknown compliance mode: {st.session_state.compliance_view_mode}")
@@ -317,6 +323,7 @@ def show_compliance_interface():
             show_compliance_overview(checker)
     except Exception as e:
         st.error(f"Error in compliance interface: {str(e)}")
+        st.sidebar.markdown(f"**Debug Error:** {str(e)}")
         st.session_state.compliance_view_mode = "overview"
         show_compliance_overview(checker)
 
@@ -450,6 +457,9 @@ def show_assessments_list(checker):
 
 def show_gap_analysis(checker):
     """Show detailed gap analysis for a specific assessment."""
+    st.markdown("## 🔍 Gap Analysis View")
+    st.success("✅ Gap Analysis function is running!")
+    
     if not st.session_state.current_assessment_id:
         st.warning("No assessment selected. Please select an assessment first.")
         st.session_state.compliance_view_mode = "view_assessments"
@@ -471,18 +481,37 @@ def show_gap_analysis(checker):
     with st.expander("🔍 Raw Assessment Data (Debug)"):
         st.json(assessment)
     
+    # Always show basic assessment info first
+    st.markdown(f"## 📊 Assessment: {assessment.get('business_name', 'Unknown')}")
+    st.markdown(f"**Industry:** {assessment.get('industry', 'Unknown').title()}")
+    st.markdown(f"**Status:** {assessment.get('status', 'Unknown').replace('_', ' ').title()}")
+    st.markdown(f"**Created:** {assessment.get('created_date', 'Unknown')}")
+    
     # Check if assessment has required fields
     if not assessment.get('categories'):
         st.error("Assessment data is incomplete. Missing categories.")
         st.info("This might be a new assessment that needs to be properly initialized.")
         
-        # Show basic assessment info even if incomplete
-        st.markdown(f"## 📊 Assessment: {assessment.get('business_name', 'Unknown')}")
-        st.markdown(f"**Industry:** {assessment.get('industry', 'Unknown').title()}")
-        st.markdown(f"**Status:** {assessment.get('status', 'Unknown').replace('_', ' ').title()}")
-        st.markdown(f"**Created:** {assessment.get('created_date', 'Unknown')}")
+        st.markdown("---")
+        st.markdown("### 🚧 Assessment Setup Required")
+        st.markdown("This assessment appears to be newly created but doesn't have the required compliance categories initialized.")
+        st.markdown("**Possible solutions:**")
+        st.markdown("1. **Refresh the page** - The compliance checker might need to reinitialize")
+        st.markdown("2. **Check the ComplianceChecker class** - Ensure it properly creates assessments with categories")
+        st.markdown("3. **Restart the app** - Session state might be corrupted")
         
-        st.info("This assessment appears to be newly created. You may need to refresh or check the compliance checker initialization.")
+        # Add a button to try to reinitialize the assessment
+        if st.button("🔄 Try to Reinitialize Assessment", key="reinit_assessment"):
+            try:
+                # Try to get the assessment again
+                refreshed_assessment = checker.get_assessment(st.session_state.current_assessment_id)
+                if refreshed_assessment and refreshed_assessment.get('categories'):
+                    st.success("Assessment reinitialized successfully!")
+                    st.rerun()
+                else:
+                    st.error("Still missing categories. Check the ComplianceChecker implementation.")
+            except Exception as e:
+                st.error(f"Error reinitializing: {str(e)}")
         return
     
     st.markdown(f"## 📊 Gap Analysis: {assessment['business_name']}")
