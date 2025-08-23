@@ -25,7 +25,8 @@ default_state = {
     "feedback": [],
     "dark_mode": False,  # Add dark mode state
     "current_assessment_id": None,  # Track current compliance assessment
-    "mode_selector": "Overview"  # Compliance interface mode selector
+    "mode_selector": "Overview",  # Compliance interface mode selector
+    "compliance_view_mode": "overview"  # Internal mode tracking
 }
 for key, value in default_state.items():
     if key not in st.session_state:
@@ -292,24 +293,30 @@ def show_compliance_interface():
             "Gap Analysis": "gap_analysis"
         }
         
-        # Get the selected mode without updating session state here
+        # Get the selected mode and sync with internal view mode
         selected_mode = mode_mapping.get(mode, "overview")
+        
+        # Sync the sidebar selection with internal view mode
+        if st.session_state.compliance_view_mode != selected_mode:
+            st.session_state.compliance_view_mode = selected_mode
     
-    # Main content based on mode - use the selected mode from sidebar
+    # Main content based on mode - use the internal view mode
     try:
-        if selected_mode == "overview":
+        if st.session_state.compliance_view_mode == "overview":
             show_compliance_overview(checker)
-        elif selected_mode == "new_assessment":
+        elif st.session_state.compliance_view_mode == "new_assessment":
             show_new_assessment_form(checker)
-        elif selected_mode == "view_assessments":
+        elif st.session_state.compliance_view_mode == "view_assessments":
             show_assessments_list(checker)
-        elif selected_mode == "gap_analysis":
+        elif st.session_state.compliance_view_mode == "gap_analysis":
             show_gap_analysis(checker)
         else:
-            st.error(f"Unknown compliance mode: {selected_mode}")
+            st.error(f"Unknown compliance mode: {st.session_state.compliance_view_mode}")
+            st.session_state.compliance_view_mode = "overview"
             show_compliance_overview(checker)
     except Exception as e:
         st.error(f"Error in compliance interface: {str(e)}")
+        st.session_state.compliance_view_mode = "overview"
         show_compliance_overview(checker)
 
 def show_compliance_overview(checker):
@@ -344,15 +351,15 @@ def show_compliance_overview(checker):
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("➕ Start New Assessment", use_container_width=True):
-            # Update the mode selector to trigger the new assessment view
-            st.session_state.mode_selector = "New Assessment"
+        if st.button("➕ Start New Assessment", use_container_width=True, key="quick_new_assessment"):
+            # Update the internal view mode
+            st.session_state.compliance_view_mode = "new_assessment"
             st.rerun()
     
     with col2:
-        if st.button("📊 View All Assessments", use_container_width=True):
-            # Update the mode selector to trigger the assessments view
-            st.session_state.mode_selector = "View Assessments"
+        if st.button("📊 View All Assessments", use_container_width=True, key="quick_view_assessments"):
+            # Update the internal view mode
+            st.session_state.compliance_view_mode = "view_assessments"
             st.rerun()
     
     st.markdown("---")
@@ -374,7 +381,7 @@ def show_compliance_overview(checker):
                 
                 if st.button(f"View Details", key=f"view_{assessment['id']}"):
                     st.session_state.current_assessment_id = assessment['id']
-                    st.session_state.mode_selector = "Gap Analysis"
+                    st.session_state.compliance_view_mode = "gap_analysis"
                     st.rerun()
     else:
         st.info("No assessments yet. Start your first compliance assessment!")
@@ -397,7 +404,7 @@ def show_new_assessment_form(checker):
             submitted = st.form_submit_button("Create Assessment", use_container_width=True)
         with col2:
             if st.form_submit_button("Cancel", use_container_width=True):
-                st.session_state.mode_selector = "Overview"
+                st.session_state.compliance_view_mode = "overview"
                 st.rerun()
         
         if submitted and business_name and assessor:
@@ -405,7 +412,7 @@ def show_new_assessment_form(checker):
                 assessment_id = checker.create_assessment(business_name, industry, assessor)
                 st.session_state.current_assessment_id = assessment_id
                 st.success(f"Assessment created successfully! ID: {assessment_id}")
-                st.session_state.mode_selector = "Gap Analysis"
+                st.session_state.compliance_view_mode = "gap_analysis"
                 st.rerun()
 
 def show_assessments_list(checker):
@@ -428,7 +435,7 @@ def show_assessments_list(checker):
                 with col4:
                     if st.button("View Details", key=f"details_{assessment['id']}"):
                         st.session_state.current_assessment_id = assessment['id']
-                        st.session_state.mode_selector = "Gap Analysis"
+                        st.session_state.compliance_view_mode = "gap_analysis"
                         st.rerun()
                 
                 # Category breakdown
@@ -443,14 +450,14 @@ def show_gap_analysis(checker):
     """Show detailed gap analysis for a specific assessment."""
     if not st.session_state.current_assessment_id:
         st.warning("No assessment selected. Please select an assessment first.")
-        st.session_state.mode_selector = "View Assessments"
+        st.session_state.compliance_view_mode = "view_assessments"
         st.rerun()
         return
     
     assessment = checker.get_assessment(st.session_state.current_assessment_id)
     if not assessment:
         st.error("Assessment not found.")
-        st.session_state.mode_selector = "View Assessments"
+        st.session_state.compliance_view_mode = "view_assessments"
         st.rerun()
         return
     
