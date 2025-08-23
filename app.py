@@ -253,6 +253,18 @@ def show_compliance_interface():
     if 'compliance_checker' not in st.session_state:
         st.session_state.compliance_checker = ComplianceChecker()
     
+    # Ensure compliance_mode is properly initialized
+    if 'compliance_mode' not in st.session_state:
+        st.session_state.compliance_mode = "overview"
+    
+    # Ensure current_assessment_id is properly initialized
+    if 'current_assessment_id' not in st.session_state:
+        st.session_state.current_assessment_id = None
+    
+    # Debug information (can be removed later)
+    st.sidebar.markdown(f"**Debug:** Mode = {st.session_state.compliance_mode}")
+    st.sidebar.markdown(f"**Debug:** Assessment ID = {st.session_state.current_assessment_id}")
+    
     checker = st.session_state.compliance_checker
     
     # Sidebar navigation
@@ -277,24 +289,37 @@ def show_compliance_interface():
             key="compliance_mode"
         )
         
-        if mode == "Overview":
-            st.session_state.compliance_mode = "overview"
-        elif mode == "New Assessment":
-            st.session_state.compliance_mode = "new_assessment"
-        elif mode == "View Assessments":
-            st.session_state.compliance_mode = "view_assessments"
-        elif mode == "Gap Analysis":
-            st.session_state.compliance_mode = "gap_analysis"
+        # Map the display text to internal mode values
+        mode_mapping = {
+            "Overview": "overview",
+            "New Assessment": "new_assessment", 
+            "View Assessments": "view_assessments",
+            "Gap Analysis": "gap_analysis"
+        }
+        
+        # Update session state based on selection
+        selected_mode = mode_mapping.get(mode, "overview")
+        if st.session_state.compliance_mode != selected_mode:
+            st.session_state.compliance_mode = selected_mode
     
     # Main content based on mode
-    if st.session_state.compliance_mode == "overview":
+    try:
+        if st.session_state.compliance_mode == "overview":
+            show_compliance_overview(checker)
+        elif st.session_state.compliance_mode == "new_assessment":
+            show_new_assessment_form(checker)
+        elif st.session_state.compliance_mode == "view_assessments":
+            show_assessments_list(checker)
+        elif st.session_state.compliance_mode == "gap_analysis":
+            show_gap_analysis(checker)
+        else:
+            st.error(f"Unknown compliance mode: {st.session_state.compliance_mode}")
+            st.session_state.compliance_mode = "overview"
+            show_compliance_overview(checker)
+    except Exception as e:
+        st.error(f"Error in compliance interface: {str(e)}")
+        st.session_state.compliance_mode = "overview"
         show_compliance_overview(checker)
-    elif st.session_state.compliance_mode == "new_assessment":
-        show_new_assessment_form(checker)
-    elif st.session_state.compliance_mode == "view_assessments":
-        show_assessments_list(checker)
-    elif st.session_state.compliance_mode == "gap_analysis":
-        show_gap_analysis(checker)
 
 def show_compliance_overview(checker):
     """Show compliance checker overview and statistics."""
