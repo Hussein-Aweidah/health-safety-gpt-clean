@@ -28,6 +28,7 @@ default_state = {
     "mode_selector": "Overview",  # Compliance interface mode selector
     "compliance_view_mode": "overview",  # Internal mode tracking
     "last_button_click": None,  # Track last button click to prevent sidebar override
+    "previous_sidebar_mode": None,  # Track previous sidebar selection
     "assessment_to_delete": None,  # Track assessment to be deleted
     "show_delete_confirmation": False  # Show delete confirmation modal
 }
@@ -276,6 +277,10 @@ def show_compliance_interface():
     if 'current_assessment_id' not in st.session_state:
         st.session_state.current_assessment_id = None
     
+    # Initialize previous_sidebar_mode if not set
+    if 'previous_sidebar_mode' not in st.session_state:
+        st.session_state.previous_sidebar_mode = "Overview"
+    
     # Debug information (can be removed later)
     st.sidebar.markdown(f"**Debug:** Assessment ID = {st.session_state.current_assessment_id}")
     st.sidebar.markdown(f"**Debug:** View Mode = {st.session_state.compliance_view_mode}")
@@ -318,14 +323,21 @@ def show_compliance_interface():
         selected_mode = mode_mapping.get(mode, "overview")
         st.sidebar.markdown(f"**Debug:** Sidebar mode '{mode}' maps to '{selected_mode}'")
         
-        # Sync the sidebar selection with internal view mode
-        # BUT don't override if we just set a specific mode from a button
-        if st.session_state.compliance_view_mode != selected_mode:
-            # Check if this is a user-initiated sidebar change or a button-initiated change
+        # Detect if user manually changed the sidebar
+        if st.session_state.previous_sidebar_mode != mode:
+            st.sidebar.markdown(f"**Debug:** User manually changed sidebar from '{st.session_state.previous_sidebar_mode}' to '{mode}'")
+            # User manually changed sidebar, so update the view mode
+            st.session_state.compliance_view_mode = selected_mode
+            # Clear button click tracking since user is now controlling via sidebar
+            st.session_state.last_button_click = None
+            # Update the previous sidebar mode
+            st.session_state.previous_sidebar_mode = mode
+        elif st.session_state.compliance_view_mode != selected_mode:
+            # Sidebar mode matches but view mode doesn't - this might be a button click
             if 'last_button_click' in st.session_state and st.session_state.last_button_click == st.session_state.compliance_view_mode:
-                st.sidebar.markdown(f"**Debug:** Ignoring sidebar override - button mode '{st.session_state.compliance_view_mode}' takes priority")
+                st.sidebar.markdown(f"**Debug:** Button mode '{st.session_state.compliance_view_mode}' active, sidebar shows '{selected_mode}'")
             else:
-                st.sidebar.markdown(f"**Debug:** Sidebar changing mode from '{st.session_state.compliance_view_mode}' to '{selected_mode}'")
+                st.sidebar.markdown(f"**Debug:** Syncing view mode from '{st.session_state.compliance_view_mode}' to '{selected_mode}'")
                 st.session_state.compliance_view_mode = selected_mode
     
     # Main content based on mode - use the internal view mode
@@ -390,6 +402,8 @@ def show_compliance_overview(checker):
             # Update the internal view mode
             st.session_state.compliance_view_mode = "new_assessment"
             st.session_state.last_button_click = "new_assessment"  # Track this button click
+            # Update sidebar to match button action
+            st.session_state.previous_sidebar_mode = "New Assessment"
             st.sidebar.markdown(f"**Debug:** Button clicked, setting mode to: {st.session_state.compliance_view_mode}")
             st.rerun()
     
@@ -398,6 +412,8 @@ def show_compliance_overview(checker):
             # Update the internal view mode
             st.session_state.compliance_view_mode = "view_assessments"
             st.session_state.last_button_click = "view_assessments"  # Track this button click
+            # Update sidebar to match button action
+            st.session_state.previous_sidebar_mode = "View Assessments"
             st.rerun()
     
     st.markdown("---")
@@ -424,6 +440,8 @@ def show_compliance_overview(checker):
                         st.session_state.current_assessment_id = assessment['id']
                         st.session_state.compliance_view_mode = "gap_analysis"
                         st.session_state.last_button_click = "gap_analysis"  # Track this button click
+                        # Update sidebar to match button action
+                        st.session_state.previous_sidebar_mode = "Gap Analysis"
                         st.sidebar.success(f"Switching to assessment: {assessment['id']}")
                         st.sidebar.markdown(f"**Debug:** Button clicked, mode set to: {st.session_state.compliance_view_mode}")
                         # Force a rerun to ensure state is updated
@@ -433,6 +451,8 @@ def show_compliance_overview(checker):
                         st.session_state.assessment_to_delete = assessment['id']
                         st.session_state.show_delete_confirmation = True
                         st.session_state.last_button_click = "overview"  # Track this button click
+                        # Update sidebar to match button action
+                        st.session_state.previous_sidebar_mode = "Overview"
                         st.rerun()
     else:
         st.info("No assessments yet. Start your first compliance assessment!")
@@ -453,6 +473,8 @@ def show_compliance_overview(checker):
                      st.session_state.show_delete_confirmation = False
                      st.session_state.assessment_to_delete = None
                      st.session_state.last_button_click = "overview"  # Track this button click
+                     # Update sidebar to match button action
+                     st.session_state.previous_sidebar_mode = "Overview"
                      st.rerun()
              with col2:
                  if st.button("🗑️ Delete", key="confirm_delete", type="primary"):
@@ -468,6 +490,8 @@ def show_compliance_overview(checker):
                          st.session_state.show_delete_confirmation = False
                          st.session_state.assessment_to_delete = None
                          st.session_state.last_button_click = "overview"  # Track this button click
+                         # Update sidebar to match button action
+                         st.session_state.previous_sidebar_mode = "Overview"
                          st.rerun()
                      except Exception as e:
                          st.error(f"Error deleting assessment: {str(e)}")
@@ -495,6 +519,8 @@ def show_new_assessment_form(checker):
             if st.form_submit_button("Cancel", use_container_width=True):
                 st.session_state.compliance_view_mode = "overview"
                 st.session_state.last_button_click = "overview"  # Track this button click
+                # Update sidebar to match button action
+                st.session_state.previous_sidebar_mode = "Overview"
                 st.rerun()
         
         if submitted and business_name and assessor:
@@ -504,6 +530,8 @@ def show_new_assessment_form(checker):
                 st.success(f"Assessment created successfully! ID: {assessment_id}")
                 st.session_state.compliance_view_mode = "gap_analysis"
                 st.session_state.last_button_click = "gap_analysis"  # Track this button click
+                # Update sidebar to match button action
+                st.session_state.previous_sidebar_mode = "Gap Analysis"
                 st.rerun()
 
 def show_assessments_list(checker):
@@ -530,12 +558,16 @@ def show_assessments_list(checker):
                             st.session_state.current_assessment_id = assessment['id']
                             st.session_state.compliance_view_mode = "gap_analysis"
                             st.session_state.last_button_click = "gap_analysis"  # Track this button click
+                            # Update sidebar to match button action
+                            st.session_state.previous_sidebar_mode = "Gap Analysis"
                             st.rerun()
                     with col4b:
                         if st.button("🗑️", key=f"delete_details_{assessment['id']}", type="secondary", help="Delete this assessment"):
                             st.session_state.assessment_to_delete = assessment['id']
                             st.session_state.show_delete_confirmation = True
                             st.session_state.last_button_click = "view_assessments"  # Track this button click
+                            # Update sidebar to match button action
+                            st.session_state.previous_sidebar_mode = "View Assessments"
                             st.rerun()
                 
                 # Category breakdown
