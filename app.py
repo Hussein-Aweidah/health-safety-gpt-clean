@@ -26,7 +26,8 @@ default_state = {
     "dark_mode": False,  # Add dark mode state
     "current_assessment_id": None,  # Track current compliance assessment
     "mode_selector": "Overview",  # Compliance interface mode selector
-    "compliance_view_mode": "overview"  # Internal mode tracking
+    "compliance_view_mode": "overview",  # Internal mode tracking
+    "last_button_click": None  # Track last button click to prevent sidebar override
 }
 for key, value in default_state.items():
     if key not in st.session_state:
@@ -299,9 +300,14 @@ def show_compliance_interface():
         st.sidebar.markdown(f"**Debug:** Sidebar mode '{mode}' maps to '{selected_mode}'")
         
         # Sync the sidebar selection with internal view mode
+        # BUT don't override if we just set a specific mode from a button
         if st.session_state.compliance_view_mode != selected_mode:
-            st.sidebar.markdown(f"**Debug:** Sidebar changing mode from '{st.session_state.compliance_view_mode}' to '{selected_mode}'")
-            st.session_state.compliance_view_mode = selected_mode
+            # Check if this is a user-initiated sidebar change or a button-initiated change
+            if 'last_button_click' in st.session_state and st.session_state.last_button_click == st.session_state.compliance_view_mode:
+                st.sidebar.markdown(f"**Debug:** Ignoring sidebar override - button mode '{st.session_state.compliance_view_mode}' takes priority")
+            else:
+                st.sidebar.markdown(f"**Debug:** Sidebar changing mode from '{st.session_state.compliance_view_mode}' to '{selected_mode}'")
+                st.session_state.compliance_view_mode = selected_mode
     
     # Main content based on mode - use the internal view mode
     try:
@@ -364,12 +370,15 @@ def show_compliance_overview(checker):
         if st.button("➕ Start New Assessment", use_container_width=True, key="quick_new_assessment"):
             # Update the internal view mode
             st.session_state.compliance_view_mode = "new_assessment"
+            st.session_state.last_button_click = "new_assessment"  # Track this button click
+            st.sidebar.markdown(f"**Debug:** Button clicked, setting mode to: {st.session_state.compliance_view_mode}")
             st.rerun()
     
     with col2:
         if st.button("📊 View All Assessments", use_container_width=True, key="quick_view_assessments"):
             # Update the internal view mode
             st.session_state.compliance_view_mode = "view_assessments"
+            st.session_state.last_button_click = "view_assessments"  # Track this button click
             st.rerun()
     
     st.markdown("---")
@@ -393,6 +402,7 @@ def show_compliance_overview(checker):
                     # Update session state first
                     st.session_state.current_assessment_id = assessment['id']
                     st.session_state.compliance_view_mode = "gap_analysis"
+                    st.session_state.last_button_click = "gap_analysis"  # Track this button click
                     st.sidebar.success(f"Switching to assessment: {assessment['id']}")
                     st.sidebar.markdown(f"**Debug:** Button clicked, mode set to: {st.session_state.compliance_view_mode}")
                     # Force a rerun to ensure state is updated
