@@ -418,3 +418,39 @@ class ComplianceChecker:
         
         # Add more export formats here as needed
         return "Export format not supported"
+    
+    def delete_assessment(self, assessment_id: str) -> bool:
+        """Delete an assessment by ID."""
+        try:
+            data = self.load_compliance_data()
+            
+            # Find and remove the assessment
+            original_count = len(data["assessments"])
+            data["assessments"] = [
+                assessment for assessment in data["assessments"] 
+                if assessment["id"] != assessment_id
+            ]
+            
+            # Check if assessment was actually removed
+            if len(data["assessments"]) == original_count:
+                return False  # Assessment not found
+            
+            # Update the data file
+            data["last_updated"] = datetime.now().isoformat()
+            with open(self.compliance_data_file, 'w') as f:
+                json.dump(data, f, indent=2)
+            
+            return True
+            
+        except Exception as e:
+            st.error(f"Error deleting assessment: {str(e)}")
+            return False
+    
+    def assessment_exists(self, assessment_id: str) -> bool:
+        """Check if an assessment exists."""
+        return self.get_assessment(assessment_id) is not None
+    
+    def get_assessment_count(self) -> int:
+        """Get the total number of assessments."""
+        data = self.load_compliance_data()
+        return len(data["assessments"])

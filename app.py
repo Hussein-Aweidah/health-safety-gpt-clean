@@ -27,7 +27,9 @@ default_state = {
     "current_assessment_id": None,  # Track current compliance assessment
     "mode_selector": "Overview",  # Compliance interface mode selector
     "compliance_view_mode": "overview",  # Internal mode tracking
-    "last_button_click": None  # Track last button click to prevent sidebar override
+    "last_button_click": None,  # Track last button click to prevent sidebar override
+    "assessment_to_delete": None,  # Track assessment to be deleted
+    "show_delete_confirmation": False  # Show delete confirmation modal
 }
 for key, value in default_state.items():
     if key not in st.session_state:
@@ -62,6 +64,7 @@ def render_followups(latest_user_q: str, latest_answer: str, role: str, idx_key:
     cols = st.columns(len(actions))
     for i, act in enumerate(actions):
         if cols[i].button(act["label"], key=f"cta_{idx_key}_{i}"):
+            st.session_state.last_button_click = f"followup_{i}"  # Track this button click
             # Treat as a new user question and generate immediately
             new_q = act["prompt"]
             resp, src, sp, ep, ts = generate_response(new_q)
@@ -112,6 +115,7 @@ def show_homepage():
     if st.button("🚀 Start Chat", use_container_width=True):
         st.session_state.show_homepage = False
         st.session_state.prefill = ""
+        st.session_state.last_button_click = "chat"  # Track this button click
         st.rerun()
 
 
@@ -126,16 +130,19 @@ def show_settings_page():
     st.markdown("---")
     if st.button("✅ Save & Return to Chat"):
         st.session_state.show_settings = False
+        st.session_state.last_button_click = "chat"  # Track this button click
         st.rerun()
     if st.button("🏠 Return to Homepage"):
         st.session_state.show_settings = False
         st.session_state.show_homepage = True
+        st.session_state.last_button_click = "homepage"  # Track this button click
         st.rerun()
     
     # Add compliance button
     if st.button("📋 Compliance Checker", use_container_width=True):
         st.session_state.show_settings = False
         st.session_state.show_compliance = True
+        st.session_state.last_button_click = "compliance"  # Track this button click
         st.rerun()
 
 
@@ -147,22 +154,27 @@ def run_chat_interface():
     with st.sidebar:
         if st.button("🏠 Return to Homepage"):
             st.session_state.show_homepage = True
+            st.session_state.last_button_click = "homepage"  # Track this button click
             st.rerun()
         if st.button("⚙️ Open Settings Page"):
             st.session_state.show_settings = True
+            st.session_state.last_button_click = "settings"  # Track this button click
             st.rerun()
         
         if st.button("📋 Compliance Checker"):
             st.session_state.show_compliance = True
+            st.session_state.last_button_click = "compliance"  # Track this button click
             st.rerun()
 
         st.markdown("---")
         st.markdown("## 💾 Session")
         st.text_input("Session Name", value=st.session_state.session_name, key="session_name")
         if st.button("💾 Save Session"):
+            st.session_state.last_button_click = "save_session"  # Track this button click
             save_to_history(None, None, None, None, None, session_name=st.session_state.session_name)
             st.success(f"Session '{st.session_state.session_name}' saved.")
         if st.button("🧹 Clear Chat"):
+            st.session_state.last_button_click = "clear_chat"  # Track this button click
             st.session_state.chat_history = []
 
         st.markdown("---")
@@ -170,6 +182,7 @@ def run_chat_interface():
         sessions = get_sessions()
         selected = st.selectbox("📂 Load Session", sessions, index=0 if sessions else None)
         if st.button("📥 Load Selected"):
+            st.session_state.last_button_click = "load_session"  # Track this button click
             st.session_state.chat_history = load_session(selected)
 
     # Chat Input
@@ -210,6 +223,7 @@ def run_chat_interface():
             # Actions under each assistant message
             col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
             if col1.button("📋 Copy", key=f"copy_{idx}"):
+                st.session_state.last_button_click = "copy_message"  # Track this button click
                 escaped = json.dumps(entry["answer"])
                 components.html(
                     f"<script>navigator.clipboard.writeText({escaped});</script>",
@@ -218,6 +232,7 @@ def run_chat_interface():
                 col1.success("Copied!")
 
             if col2.button("🔄 Regenerate", key=f"regen_{idx}"):
+                st.session_state.last_button_click = "regenerate_message"  # Track this button click
                 q = entry["question"]
                 r2, s2, sp2, ep2, t2 = generate_response(q)
                 src2 = "Unknown" if not s2 or s2 == "Unknown" else (f"{s2} (pp. {sp2}–{ep2})" if sp2 != "N/A" and ep2 != "N/A" else s2)
@@ -230,9 +245,11 @@ def run_chat_interface():
                 st.rerun()
 
             if col3.button("👍", key=f"like_{idx}"):
+                st.session_state.last_button_click = "like_message"  # Track this button click
                 st.session_state.feedback.append((idx, True))
                 col3.success("Thanks!")
             if col4.button("👎", key=f"dislike_{idx}"):
+                st.session_state.last_button_click = "dislike_message"  # Track this button click
                 st.session_state.feedback.append((idx, False))
                 col4.warning("Got it!")
 
@@ -272,10 +289,12 @@ def show_compliance_interface():
         if st.button("🏠 Return to Homepage"):
             st.session_state.show_compliance = False
             st.session_state.show_homepage = True
+            st.session_state.last_button_click = "homepage"  # Track this button click
             st.rerun()
         
         if st.button("💬 Back to Chat"):
             st.session_state.show_compliance = False
+            st.session_state.last_button_click = "chat"  # Track this button click
             st.rerun()
         
         st.markdown("---")
@@ -398,17 +417,63 @@ def show_compliance_overview(checker):
                 with col3:
                     st.metric("Requirements", f"{assessment['compliant_requirements']}/{assessment['total_requirements']}")
                 
-                if st.button(f"View Details", key=f"view_{assessment['id']}"):
-                    # Update session state first
-                    st.session_state.current_assessment_id = assessment['id']
-                    st.session_state.compliance_view_mode = "gap_analysis"
-                    st.session_state.last_button_click = "gap_analysis"  # Track this button click
-                    st.sidebar.success(f"Switching to assessment: {assessment['id']}")
-                    st.sidebar.markdown(f"**Debug:** Button clicked, mode set to: {st.session_state.compliance_view_mode}")
-                    # Force a rerun to ensure state is updated
-                    st.rerun()
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button(f"View Details", key=f"view_{assessment['id']}"):
+                        # Update session state first
+                        st.session_state.current_assessment_id = assessment['id']
+                        st.session_state.compliance_view_mode = "gap_analysis"
+                        st.session_state.last_button_click = "gap_analysis"  # Track this button click
+                        st.sidebar.success(f"Switching to assessment: {assessment['id']}")
+                        st.sidebar.markdown(f"**Debug:** Button clicked, mode set to: {st.session_state.compliance_view_mode}")
+                        # Force a rerun to ensure state is updated
+                        st.rerun()
+                with col2:
+                    if st.button(f"🗑️ Delete", key=f"delete_{assessment['id']}", type="secondary"):
+                        st.session_state.assessment_to_delete = assessment['id']
+                        st.session_state.show_delete_confirmation = True
+                        st.session_state.last_button_click = "overview"  # Track this button click
+                        st.rerun()
     else:
         st.info("No assessments yet. Start your first compliance assessment!")
+    
+    # Delete confirmation modal
+    if st.session_state.get('show_delete_confirmation') and st.session_state.get('assessment_to_delete'):
+         st.markdown("---")
+         st.markdown("## 🗑️ Delete Assessment")
+         
+         assessment_to_delete = checker.get_assessment(st.session_state.assessment_to_delete)
+         if assessment_to_delete:
+             st.warning(f"Are you sure you want to delete the assessment for **{assessment_to_delete['business_name']}**?")
+             st.info("This action cannot be undone.")
+             
+             col1, col2, col3 = st.columns([1, 1, 1])
+             with col1:
+                 if st.button("❌ Cancel", key="cancel_delete"):
+                     st.session_state.show_delete_confirmation = False
+                     st.session_state.assessment_to_delete = None
+                     st.session_state.last_button_click = "overview"  # Track this button click
+                     st.rerun()
+             with col2:
+                 if st.button("🗑️ Delete", key="confirm_delete", type="primary"):
+                     try:
+                         # Call the delete method from ComplianceChecker
+                         if hasattr(checker, 'delete_assessment'):
+                             checker.delete_assessment(st.session_state.assessment_to_delete)
+                             st.success("Assessment deleted successfully!")
+                         else:
+                             st.error("Delete method not implemented in ComplianceChecker")
+                         
+                         # Clear the delete state
+                         st.session_state.show_delete_confirmation = False
+                         st.session_state.assessment_to_delete = None
+                         st.session_state.last_button_click = "overview"  # Track this button click
+                         st.rerun()
+                     except Exception as e:
+                         st.error(f"Error deleting assessment: {str(e)}")
+                         st.session_state.show_delete_confirmation = False
+                         st.session_state.assessment_to_delete = None
+                         st.rerun()
 
 def show_new_assessment_form(checker):
     """Show form to create new compliance assessment."""
@@ -429,6 +494,7 @@ def show_new_assessment_form(checker):
         with col2:
             if st.form_submit_button("Cancel", use_container_width=True):
                 st.session_state.compliance_view_mode = "overview"
+                st.session_state.last_button_click = "overview"  # Track this button click
                 st.rerun()
         
         if submitted and business_name and assessor:
@@ -437,6 +503,7 @@ def show_new_assessment_form(checker):
                 st.session_state.current_assessment_id = assessment_id
                 st.success(f"Assessment created successfully! ID: {assessment_id}")
                 st.session_state.compliance_view_mode = "gap_analysis"
+                st.session_state.last_button_click = "gap_analysis"  # Track this button click
                 st.rerun()
 
 def show_assessments_list(checker):
@@ -457,10 +524,19 @@ def show_assessments_list(checker):
                 with col3:
                     st.metric("Requirements", f"{assessment['compliant_requirements']}/{assessment['total_requirements']}")
                 with col4:
-                    if st.button("View Details", key=f"details_{assessment['id']}"):
-                        st.session_state.current_assessment_id = assessment['id']
-                        st.session_state.compliance_view_mode = "gap_analysis"
-                        st.rerun()
+                    col4a, col4b = st.columns(2)
+                    with col4a:
+                        if st.button("View Details", key=f"details_{assessment['id']}"):
+                            st.session_state.current_assessment_id = assessment['id']
+                            st.session_state.compliance_view_mode = "gap_analysis"
+                            st.session_state.last_button_click = "gap_analysis"  # Track this button click
+                            st.rerun()
+                    with col4b:
+                        if st.button("🗑️", key=f"delete_details_{assessment['id']}", type="secondary", help="Delete this assessment"):
+                            st.session_state.assessment_to_delete = assessment['id']
+                            st.session_state.show_delete_confirmation = True
+                            st.session_state.last_button_click = "view_assessments"  # Track this button click
+                            st.rerun()
                 
                 # Category breakdown
                 st.markdown("**Category Breakdown:**")
@@ -527,6 +603,7 @@ def show_gap_analysis(checker):
                 refreshed_assessment = checker.get_assessment(st.session_state.current_assessment_id)
                 if refreshed_assessment and refreshed_assessment.get('categories'):
                     st.success("Assessment reinitialized successfully!")
+                    st.session_state.last_button_click = "gap_analysis"  # Track this button click
                     st.rerun()
                 else:
                     st.error("Still missing categories. Check the ComplianceChecker implementation.")
@@ -542,6 +619,7 @@ def show_gap_analysis(checker):
             st.text_input("Category 3 (e.g., 'Equipment & Maintenance')", key="cat3")
             
             if st.form_submit_button("Add Categories"):
+                st.session_state.last_button_click = "gap_analysis"  # Track this button click
                 st.info("This is a temporary feature. The real fix is to ensure ComplianceChecker creates assessments with proper categories.")
                 st.warning("Categories will not be saved until the ComplianceChecker is properly implemented.")
         
@@ -563,6 +641,7 @@ def show_gap_analysis(checker):
     
     # Generate gap analysis
     if st.button("🔄 Generate Gap Analysis"):
+        st.session_state.last_button_click = "gap_analysis"  # Track this button click
         with st.spinner("Analyzing compliance gaps..."):
             gaps = checker.generate_gap_analysis(assessment['id'])
             
@@ -629,6 +708,7 @@ def show_gap_analysis(checker):
                 
                 with col3:
                     if st.button("Update", key=f"update_{cat_idx}_{req_idx}"):
+                        st.session_state.last_button_click = "gap_analysis"  # Track this button click
                         checker.update_requirement_status(
                             assessment['id'], cat_idx, req_idx, status, 
                             requirement['compliance_level'], requirement['evidence'],
