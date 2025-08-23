@@ -388,9 +388,11 @@ def show_compliance_overview(checker):
                     st.metric("Requirements", f"{assessment['compliant_requirements']}/{assessment['total_requirements']}")
                 
                 if st.button(f"View Details", key=f"view_{assessment['id']}"):
+                    # Update session state first
                     st.session_state.current_assessment_id = assessment['id']
                     st.session_state.compliance_view_mode = "gap_analysis"
                     st.sidebar.success(f"Switching to assessment: {assessment['id']}")
+                    # Force a rerun to ensure state is updated
                     st.rerun()
     else:
         st.info("No assessments yet. Start your first compliance assessment!")
@@ -500,6 +502,11 @@ def show_gap_analysis(checker):
         st.markdown("2. **Check the ComplianceChecker class** - Ensure it properly creates assessments with categories")
         st.markdown("3. **Restart the app** - Session state might be corrupted")
         
+        # TEMPORARY: Show a basic assessment interface even without categories
+        st.markdown("---")
+        st.markdown("### 📝 Basic Assessment Interface (Temporary)")
+        st.markdown("Since categories are missing, here's a basic interface to get you started:")
+        
         # Add a button to try to reinitialize the assessment
         if st.button("🔄 Try to Reinitialize Assessment", key="reinit_assessment"):
             try:
@@ -512,6 +519,19 @@ def show_gap_analysis(checker):
                     st.error("Still missing categories. Check the ComplianceChecker implementation.")
             except Exception as e:
                 st.error(f"Error reinitializing: {str(e)}")
+        
+        # Show a simple form to manually add categories
+        st.markdown("---")
+        st.markdown("### ➕ Add Basic Compliance Categories")
+        with st.form("add_categories"):
+            st.text_input("Category 1 (e.g., 'Risk Management')", key="cat1")
+            st.text_input("Category 2 (e.g., 'Training & Competency')", key="cat2")
+            st.text_input("Category 3 (e.g., 'Equipment & Maintenance')", key="cat3")
+            
+            if st.form_submit_button("Add Categories"):
+                st.info("This is a temporary feature. The real fix is to ensure ComplianceChecker creates assessments with proper categories.")
+                st.warning("Categories will not be saved until the ComplianceChecker is properly implemented.")
+        
         return
     
     st.markdown(f"## 📊 Gap Analysis: {assessment['business_name']}")
