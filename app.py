@@ -260,6 +260,7 @@ def show_compliance_interface():
     
     # Debug information (can be removed later)
     st.sidebar.markdown(f"**Debug:** Assessment ID = {st.session_state.current_assessment_id}")
+    st.sidebar.markdown(f"**Debug:** View Mode = {st.session_state.compliance_view_mode}")
     
     checker = st.session_state.compliance_checker
     
@@ -382,6 +383,7 @@ def show_compliance_overview(checker):
                 if st.button(f"View Details", key=f"view_{assessment['id']}"):
                     st.session_state.current_assessment_id = assessment['id']
                     st.session_state.compliance_view_mode = "gap_analysis"
+                    st.sidebar.success(f"Switching to assessment: {assessment['id']}")
                     st.rerun()
     else:
         st.info("No assessments yet. Start your first compliance assessment!")
@@ -459,6 +461,28 @@ def show_gap_analysis(checker):
         st.error("Assessment not found.")
         st.session_state.compliance_view_mode = "view_assessments"
         st.rerun()
+        return
+    
+    # Debug information
+    st.sidebar.markdown(f"**Debug:** Current Assessment ID = {st.session_state.current_assessment_id}")
+    st.sidebar.markdown(f"**Debug:** Assessment Data = {list(assessment.keys()) if assessment else 'None'}")
+    
+    # Show raw assessment data for debugging
+    with st.expander("🔍 Raw Assessment Data (Debug)"):
+        st.json(assessment)
+    
+    # Check if assessment has required fields
+    if not assessment.get('categories'):
+        st.error("Assessment data is incomplete. Missing categories.")
+        st.info("This might be a new assessment that needs to be properly initialized.")
+        
+        # Show basic assessment info even if incomplete
+        st.markdown(f"## 📊 Assessment: {assessment.get('business_name', 'Unknown')}")
+        st.markdown(f"**Industry:** {assessment.get('industry', 'Unknown').title()}")
+        st.markdown(f"**Status:** {assessment.get('status', 'Unknown').replace('_', ' ').title()}")
+        st.markdown(f"**Created:** {assessment.get('created_date', 'Unknown')}")
+        
+        st.info("This assessment appears to be newly created. You may need to refresh or check the compliance checker initialization.")
         return
     
     st.markdown(f"## 📊 Gap Analysis: {assessment['business_name']}")
