@@ -296,9 +296,11 @@ def show_compliance_interface():
         
         # Get the selected mode and sync with internal view mode
         selected_mode = mode_mapping.get(mode, "overview")
+        st.sidebar.markdown(f"**Debug:** Sidebar mode '{mode}' maps to '{selected_mode}'")
         
         # Sync the sidebar selection with internal view mode
         if st.session_state.compliance_view_mode != selected_mode:
+            st.sidebar.markdown(f"**Debug:** Sidebar changing mode from '{st.session_state.compliance_view_mode}' to '{selected_mode}'")
             st.session_state.compliance_view_mode = selected_mode
     
     # Main content based on mode - use the internal view mode
@@ -392,6 +394,7 @@ def show_compliance_overview(checker):
                     st.session_state.current_assessment_id = assessment['id']
                     st.session_state.compliance_view_mode = "gap_analysis"
                     st.sidebar.success(f"Switching to assessment: {assessment['id']}")
+                    st.sidebar.markdown(f"**Debug:** Button clicked, mode set to: {st.session_state.compliance_view_mode}")
                     # Force a rerun to ensure state is updated
                     st.rerun()
     else:
