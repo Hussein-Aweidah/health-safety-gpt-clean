@@ -282,8 +282,8 @@ def show_compliance_interface():
         st.session_state.previous_sidebar_mode = "Overview"
     
     # Debug information (can be removed later)
-    st.sidebar.markdown(f"**Debug:** Assessment ID = {st.session_state.current_assessment_id}")
-    st.sidebar.markdown(f"**Debug:** View Mode = {st.session_state.compliance_view_mode}")
+    # st.sidebar.markdown(f"**Debug:** Assessment ID = {st.session_state.current_assessment_id}")
+    # st.sidebar.markdown(f"**Debug:** View Mode = {st.session_state.compliance_view_mode}")
     
     checker = st.session_state.compliance_checker
     
@@ -321,40 +321,21 @@ def show_compliance_interface():
         
         # Get the selected mode and sync with internal view mode
         selected_mode = mode_mapping.get(mode, "overview")
-        st.sidebar.markdown(f"**Debug:** Sidebar mode '{mode}' maps to '{selected_mode}'")
         
-        # Detect if user manually changed the sidebar
-        if st.session_state.previous_sidebar_mode != mode:
-            st.sidebar.markdown(f"**Debug:** User manually changed sidebar from '{st.session_state.previous_sidebar_mode}' to '{mode}'")
-            # User manually changed sidebar, so update the view mode
+        # Simple mode synchronization - always allow sidebar changes
+        if st.session_state.compliance_view_mode != selected_mode:
             st.session_state.compliance_view_mode = selected_mode
-            # Clear button click tracking since user is now controlling via sidebar
-            st.session_state.last_button_click = None
-            # Update the previous sidebar mode
             st.session_state.previous_sidebar_mode = mode
-        elif st.session_state.compliance_view_mode != selected_mode:
-            # Sidebar mode matches but view mode doesn't - this might be a button click
-            if 'last_button_click' in st.session_state and st.session_state.last_button_click == st.session_state.compliance_view_mode:
-                st.sidebar.markdown(f"**Debug:** Button mode '{st.session_state.compliance_view_mode}' active, sidebar shows '{selected_mode}'")
-            else:
-                st.sidebar.markdown(f"**Debug:** Syncing view mode from '{st.session_state.compliance_view_mode}' to '{selected_mode}'")
-                st.session_state.compliance_view_mode = selected_mode
     
     # Main content based on mode - use the internal view mode
     try:
-        st.sidebar.markdown(f"**Debug:** About to show mode: {st.session_state.compliance_view_mode}")
-        
         if st.session_state.compliance_view_mode == "overview":
-            st.sidebar.markdown("**Debug:** Showing overview")
             show_compliance_overview(checker)
         elif st.session_state.compliance_view_mode == "new_assessment":
-            st.sidebar.markdown("**Debug:** Showing new assessment form")
             show_new_assessment_form(checker)
         elif st.session_state.compliance_view_mode == "view_assessments":
-            st.sidebar.markdown("**Debug:** Showing assessments list")
             show_assessments_list(checker)
         elif st.session_state.compliance_view_mode == "gap_analysis":
-            st.sidebar.markdown("**Debug:** Showing gap analysis")
             show_gap_analysis(checker)
         else:
             st.error(f"Unknown compliance mode: {st.session_state.compliance_view_mode}")
@@ -362,7 +343,6 @@ def show_compliance_interface():
             show_compliance_overview(checker)
     except Exception as e:
         st.error(f"Error in compliance interface: {str(e)}")
-        st.sidebar.markdown(f"**Debug Error:** {str(e)}")
         st.session_state.compliance_view_mode = "overview"
         show_compliance_overview(checker)
 
@@ -402,9 +382,9 @@ def show_compliance_overview(checker):
             # Update the internal view mode
             st.session_state.compliance_view_mode = "new_assessment"
             st.session_state.last_button_click = "new_assessment"  # Track this button click
-            # Update sidebar to match button action
+            # Update sidebar to match button action (simplified)
             st.session_state.previous_sidebar_mode = "New Assessment"
-            st.sidebar.markdown(f"**Debug:** Button clicked, setting mode to: {st.session_state.compliance_view_mode}")
+            # st.sidebar.markdown(f"**Debug:** Button clicked, setting mode to: {st.session_state.compliance_view_mode}")
             st.rerun()
     
     with col2:
@@ -443,7 +423,7 @@ def show_compliance_overview(checker):
                         # Update sidebar to match button action
                         st.session_state.previous_sidebar_mode = "Gap Analysis"
                         st.sidebar.success(f"Switching to assessment: {assessment['id']}")
-                        st.sidebar.markdown(f"**Debug:** Button clicked, mode set to: {st.session_state.compliance_view_mode}")
+                        # st.sidebar.markdown(f"**Debug:** Button clicked, mode set to: {st.session_state.compliance_view_mode}")
                         # Force a rerun to ensure state is updated
                         st.rerun()
                 with col2:
@@ -581,7 +561,16 @@ def show_assessments_list(checker):
 def show_gap_analysis(checker):
     """Show detailed gap analysis for a specific assessment."""
     st.markdown("## 🔍 Gap Analysis View")
-    st.success("✅ Gap Analysis function is running!")
+    
+    # Add a quick way to go back
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.markdown("**Loading assessment details...**")
+    with col2:
+        if st.button("← Back to Overview", key="back_to_overview"):
+            st.session_state.compliance_view_mode = "overview"
+            st.session_state.previous_sidebar_mode = "Overview"
+            st.rerun()
     
     if not st.session_state.current_assessment_id:
         st.warning("No assessment selected. Please select an assessment first.")
@@ -596,13 +585,13 @@ def show_gap_analysis(checker):
         st.rerun()
         return
     
-    # Debug information
-    st.sidebar.markdown(f"**Debug:** Current Assessment ID = {st.session_state.current_assessment_id}")
-    st.sidebar.markdown(f"**Debug:** Assessment Data = {list(assessment.keys()) if assessment else 'None'}")
+    # Debug information (commented out for performance)
+    # st.sidebar.markdown(f"**Debug:** Current Assessment ID = {st.session_state.current_assessment_id}")
+    # st.sidebar.markdown(f"**Debug:** Assessment Data = {list(assessment.keys()) if assessment else 'None'}")
     
-    # Show raw assessment data for debugging
-    with st.expander("🔍 Raw Assessment Data (Debug)"):
-        st.json(assessment)
+    # Show raw assessment data for debugging (commented out for performance)
+    # with st.expander("🔍 Raw Assessment Data (Debug)"):
+    #     st.json(assessment)
     
     # Always show basic assessment info first
     st.markdown(f"## 📊 Assessment: {assessment.get('business_name', 'Unknown')}")
@@ -674,8 +663,15 @@ def show_gap_analysis(checker):
     # Generate gap analysis
     if st.button("🔄 Generate Gap Analysis"):
         st.session_state.last_button_click = "gap_analysis"  # Track this button click
+        
+        # Show loading state
         with st.spinner("Analyzing compliance gaps..."):
-            gaps = checker.generate_gap_analysis(assessment['id'])
+            try:
+                gaps = checker.generate_gap_analysis(assessment['id'])
+                st.success("Gap analysis completed!")
+            except Exception as e:
+                st.error(f"Error generating gap analysis: {str(e)}")
+                return
             
             # Display gaps by priority
             if gaps['critical_gaps']:
