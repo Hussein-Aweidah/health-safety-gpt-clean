@@ -1,9 +1,30 @@
+# Environment
 .env
+venv/
+env/
+ENV/
+
+# Python cache
 __pycache__/
 *.pyc
-venv/
+*.pyo
+*.pyd
+.Python
+
+# IDE
 .vscode/
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# Project-specific data/cache
 chroma_db/
 user_data/
 chromadb/

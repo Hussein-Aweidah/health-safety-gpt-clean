@@ -3,22 +3,13 @@ from datetime import datetime
 from glob import glob
 from dotenv import load_dotenv
 
-try:
-    from langchain_text_splitters import RecursiveCharacterTextSplitter
-except ImportError:
-    from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-try:
-    from langchain_core.documents import Document
-except ImportError:
-    from langchain.schema import Document
-
-try:
-    from langchain_core.prompts import PromptTemplate
-except ImportError:
-    from langchain.prompts import PromptTemplate
-
+from glob import glob
+from langchain_community.document_loaders import PyMuPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import FAISS
 from langchain.chains import LLMChain
+from langchain_core.prompts import PromptTemplate
 from langchain_community.document_loaders import PyMuPDFLoader
 try:
     from langchain_community.vectorstores import FAISS
