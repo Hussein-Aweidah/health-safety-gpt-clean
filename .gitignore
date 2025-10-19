@@ -7,3 +7,12 @@ venv/
 chroma_db/
 user_data/
 chromadb/
+regis-app(v5.7)/
+faiss_index/
+chroma_db/
+chromadb/
+__pycache__/
+.vs/
+.DS_Store
+*.faiss
+*.pkl
