@@ -11,7 +11,7 @@ from compliance_checker import ComplianceChecker
 from auth_manager import login as auth_login, signup as auth_signup
 
 # --- Global Page Config ---
-st.set_page_config(page_title="Regis", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="Regis", page_icon="static/logo.ico", layout="wide")
 
 # --- Language Persistence Function ---
 def ensure_language_persistence():
@@ -305,7 +305,7 @@ def show_homepage():
     # debug_language_state()
     
     try:
-        with open("regis_logo.png", "rb") as image_file:
+        with open("static/logo.png", "rb") as image_file:
             encoded = base64.b64encode(image_file.read()).decode()
         
         st.markdown(
@@ -347,17 +347,6 @@ def show_homepage():
 
     # Get current language for features and button
     current_language = st.session_state.get("language", "English")
-    
-    # Add a responsive greeting that adapts to device dimensions
-    greeting_text = {
-        "English": "Welcome to Regis",
-        "Te Reo Māori": "Nau mai ki Regis",
-        "Tongan": "Mālō e lelei ki Regis",
-        "Samoan": "Talofa lava i Regis",
-        "中文 (Mandarin)": "欢迎使用 Regis",
-        "العربية (Arabic)": "مرحباً بك في Regis",
-        "فارسی (Farsi)": "خوش آمدید به Regis"
-    }.get(current_language, "Welcome to Regis")
     
     st.markdown(
         f"""
@@ -410,9 +399,6 @@ def show_homepage():
             }}
         }}
         </style>
-        <div class="responsive-greeting">
-            <h1>{greeting_text}</h1>
-        </div>
         """,
         unsafe_allow_html=True,
     )
