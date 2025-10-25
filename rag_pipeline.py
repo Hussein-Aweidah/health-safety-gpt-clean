@@ -128,22 +128,22 @@ def get_answer(query: str):
         answer = ("I'm having trouble accessing the WorkSafe documents right now. "
                   "Here is general guidance based on my training.")
         sources = []
-        pages = []
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        return answer, sources, pages, timestamp
+        return answer, sources, timestamp
 
     sources = set()
-    pages = []
     for doc in src_docs:
         md = doc.metadata or {}
+        content = doc.page_content or ""
+        # Truncate content if too long for better readability
+        if len(content) > 200:
+            content = content[:200] + "..."
         src = os.path.basename(md.get("source") or md.get("source_path") or "Unknown")
-        pg = md.get("page")
-        sources.add(src)
-        try:
-            pages.append(int(pg))
-        except (TypeError, ValueError):
-            pass
+        if src != "Unknown":
+            src = src.split('\\')[-1]
+            src += f' (page: {md.get("page")})'
 
+        sources.add(f"{content} [**Ref**: {src}]")
     fallback_phrases = {
         "i don't know","i am not sure","i'm sorry, but i don't know",
         "no relevant information","as it is unrelated to the context",
@@ -154,23 +154,17 @@ def get_answer(query: str):
         answer = llm.invoke(query).content
         answer = _format_response_with_bullets(answer, query)
         sources = set()
-        pages = []
-
-    start_page = min(pages) if pages else None
-    end_page = max(pages) if pages else None
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return answer, sorted(sources), start_page, end_page, timestamp
+    return answer, sorted(sources), timestamp
 
 
 def generate_response(query: str):
     try:
-        answer, sources, start_page, end_page, timestamp = get_answer(query)
-        source_list = ", ".join(sources) if sources else "Unknown"
-        sp = str(start_page) if start_page is not None else "N/A"
-        ep = str(end_page) if end_page is not None else "N/A"
-        return answer, source_list, sp, ep, timestamp
+        answer, sources, timestamp = get_answer(query)
+        source_list = "\n\n > " + "\n\n > ".join(sources) if sources else "Unknown"
+        return answer, source_list, timestamp
     except Exception as e:
         print(f"All QA methods failed: {e}")
         fallback_answer = ("I apologize, but I'm experiencing technical difficulties. "
                            "Please try again later or contact support if the issue persists.")
-        return fallback_answer, "Unknown", "N/A", "N/A", datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return fallback_answer, "Unknown", datetime.now().strftime("%Y-%m-%d %H:%M:%S")

@@ -85,8 +85,7 @@ def debug_language_state():
     
     # Always show current language in sidebar for debugging
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### 🌐 Current Language")
-    st.sidebar.markdown(f"**{st.session_state.get('language', 'Not Set')}**")
+    st.sidebar.caption(f"### 🌐 Current Language : {st.session_state.get('language', 'Not Set')}")
     st.sidebar.markdown("---")
 
 # ---------------------------
@@ -221,21 +220,21 @@ def render_followups(latest_user_q: str, latest_answer: str, role: str, idx_key:
     actions = suggest_followups(role)
     cols = st.columns(len(actions))
     for i, act in enumerate(actions):
-        if cols[i].button(act["label"], key=f"cta_{idx_key}_{i}"):
+        if cols[i].button(act["label"], key=f"cta_{idx_key}_{i}", use_container_width=True):
             st.session_state.last_button_click = f"followup_{i}"  # Track this button click
             # Treat as a new user question and generate immediately
             new_q = act["prompt"]
-            resp, src, sp, ep, ts = generate_response(new_q)
-            source_info = f"{src} (pp. {sp}–{ep})"
+            resp, src, ts = generate_response(new_q)
+            source_info = f"{src}"
             formatted = (
-                f"{resp}\n\n**Source:** `{source_info}`\n*Timestamp:* {ts}"
+                f"{resp}\n\n**Source:** {source_info}\n\n*Timestamp:* {ts}"
                 if st.session_state.markdown_mode
-                else f"{resp}\n\nSource: {source_info} | Timestamp: {ts}"
+                else f"{resp}\n\nSource: {source_info}\n\nTimestamp: {ts}"
             )
             # Append the Q/A so the conversation continues
             st.session_state.chat_history.append({"question": new_q, "answer": formatted})
             save_to_history(
-                new_q, resp, source_info, f"{sp}–{ep}", ts,
+                new_q, resp, source_info, ts,
                 session_name=st.session_state.session_name,
                 username=(st.session_state.email if st.session_state.authenticated else None)
             )
@@ -560,13 +559,13 @@ def show_settings_page():
         "فارسی (Farsi)": "📋 بررسی کننده انطباق"
     }.get(current_language, "📋 Compliance Checker")
     
-    if st.button(save_button_text):
+    if st.button(save_button_text, use_container_width=True):
         # Update persistent language when saving settings
         st.session_state.persistent_language = st.session_state.language
         st.session_state.show_settings = False
         st.session_state.last_button_click = "chat"  # Track this button click
         st.rerun()
-    if st.button(home_button_text):
+    if st.button(home_button_text, use_container_width=True, type="primary"):
         st.session_state.show_settings = False
         st.session_state.show_homepage = True
         st.session_state.last_button_click = "homepage"  # Track this button click
@@ -585,21 +584,18 @@ def run_chat_interface():
     # Ensure language persistence
     ensure_language_persistence()
     
-    # Debug language state
-    debug_language_state()
-    
     # Language-specific title
     current_language = st.session_state.get("language", "English")
     
     title_text = {
-        "English": "💬 Ask Regis — Your Health & Safety Assistant",
-        "Te Reo Māori": "💬 Pātai ki Regis — Tō Āwhina Hauora me te Haumaru",
-        "Tongan": "💬 Fekeʻi ki Regis — ʻO ʻEmeʻa Tokoni Fakaʻaho mo e Haumaru",
-        "Samoan": "💬 Fesili ia Regis — Lau Fesoasoani Soifua Maloloina ma le Saogalemu",
-        "中文 (Mandarin)": "💬 询问 Regis — 您的健康与安全助手",
-        "العربية (Arabic)": "💬 اسأل Regis — مساعدك في الصحة والسلامة",
-        "فارسی (Farsi)": "💬 از Regis بپرسید — دستیار بهداشت و ایمنی شما"
-    }.get(current_language, "💬 Ask Regis — Your Health & Safety Assistant")
+        "English": "Ask Regis — Your Health & Safety Assistant",
+        "Te Reo Māori": "Pātai ki Regis — Tō Āwhina Hauora me te Haumaru",
+        "Tongan": "Fekeʻi ki Regis — ʻO ʻEmeʻa Tokoni Fakaʻaho mo e Haumaru",
+        "Samoan": "Fesili ia Regis — Lau Fesoasoani Soifua Maloloina ma le Saogalemu",
+        "中文 (Mandarin)": "询问 Regis — 您的健康与安全助手",
+        "العربية (Arabic)": "اسأل Regis — مساعدك في الصحة والسلامة",
+        "فارسی (Farsi)": "از Regis بپرسید — دستیار بهداشت و ایمنی شما"
+    }.get(current_language, "Ask Regis — Your Health & Safety Assistant")
     
     st.title(title_text)
 
@@ -638,34 +634,34 @@ def run_chat_interface():
             "فارسی (Farsi)": "📋 بررسی کننده انطباق"
         }.get(current_language, "📋 Compliance Checker")
         
-        if st.button(home_button_text):
+        if st.button(home_button_text, use_container_width=True, type="primary"):
             st.session_state.show_homepage = True
             st.session_state.last_button_click = "homepage"  # Track this button click
             st.rerun()
-        if st.button(settings_button_text):
+        if st.button(settings_button_text, use_container_width=True, type="primary"):
             st.session_state.show_settings = True
             st.session_state.last_button_click = "settings"  # Track this button click
             st.rerun()
         
-        if st.button(compliance_button_text):
+        if st.button(compliance_button_text, use_container_width=True, type="primary"):
             st.session_state.show_compliance = True
             st.session_state.last_button_click = "compliance"  # Track this button click
             st.rerun()
 
         st.markdown("---")
-        st.markdown("## 💾 Session")
+        st.caption("## Save Session")
         st.text_input("Session Name", value=st.session_state.session_name, key="session_name")
         
         # Language-specific session button text
         save_session_text = {
-            "English": "💾 Save Session",
+            "English": "💾 Save",
             "Te Reo Māori": "💾 Tiaki Wā",
             "Tongan": "💾 Faʻu Taimi",
             "Samoan": "💾 Teu Taimi",
             "中文 (Mandarin)": "💾 保存会话",
             "العربية (Arabic)": "💾 حفظ الجلسة",
             "فارسی (Farsi)": "💾 ذخیره جلسه"
-        }.get(current_language, "💾 Save Session")
+        }.get(current_language, "💾 Save")
         
         clear_chat_text = {
             "English": "🧹 Clear Chat",
@@ -677,22 +673,22 @@ def run_chat_interface():
             "فارسی (Farsi)": "🧹 پاک کردن چت"
         }.get(current_language, "🧹 Clear Chat")
         
-        if st.button(save_session_text):
+        if st.button(save_session_text, use_container_width=True):
             st.session_state.last_button_click = "save_session"  # Track this button click
             # Save full chat_history for the current user (or guest)
             save_to_history(
-                None, None, None, None, None,
+                None, None, None, None,
                 session_name=st.session_state.session_name,
                 username=(st.session_state.email if st.session_state.authenticated else None),
                 chat_history=st.session_state.chat_history
             )
             st.success(f"Session '{st.session_state.session_name}' saved.")
-        if st.button(clear_chat_text):
+        if st.button(clear_chat_text, use_container_width=True):
             st.session_state.last_button_click = "clear_chat"  # Track this button click
             st.session_state.chat_history = []
 
         st.markdown("---")
-        st.markdown("## 🕓 Previous Sessions")
+        st.caption("## Previous Sessions")
         sessions = get_sessions()
         
         # scope sessions to user/guest
@@ -720,12 +716,15 @@ def run_chat_interface():
         }.get(current_language, "📥 Load Selected")
         
         selected = st.selectbox(load_session_text, sessions, index=0 if sessions else None)
-        if st.button(load_selected_text):
+        if st.button(load_selected_text, use_container_width=True):
             st.session_state.last_button_click = "load_session"  # Track this button click
             st.session_state.chat_history = load_session(
                 selected,
                 username=(st.session_state.email if st.session_state.authenticated else None)
             )
+        
+        # Debug language state
+        debug_language_state()
 
     # Chat Input
     # Language-specific placeholder text
@@ -748,20 +747,20 @@ def run_chat_interface():
     if user_input:
         st.session_state.prefill = ""
         with st.spinner("Analyzing your question…"):
-            resp, src, sp, ep, ts = generate_response(user_input)
+            resp, src,  ts = generate_response(user_input)
             source_info = (
                 "Unknown" if not src or src == "Unknown"
-                else (f"{src} (pp. {sp}–{ep})" if sp != "N/A" and ep != "N/A" else src)
+                    else (f"{src}" if src != "Unknown" else src)
             )
             formatted = (
-                f"{resp}\n\n**Source:** `{source_info}`\n*Timestamp:* {ts}"
+                f"{resp}\n\n**Source:** {source_info}\n\n*Timestamp:* {ts}"
                 if st.session_state.markdown_mode
-                else f"{resp}\n\nSource: {source_info} | Timestamp: {ts}"
+                else f"{resp}\n\nSource: {source_info}\n\nTimestamp: {ts}"
             )
 
             st.session_state.chat_history.append({"question": user_input, "answer": formatted})
             save_to_history(
-                user_input, resp, source_info, f"{sp}–{ep}", ts,
+                user_input, resp, source_info, ts,
                 session_name=st.session_state.session_name,
                 username=(st.session_state.email if st.session_state.authenticated else None)
             )
@@ -777,20 +776,20 @@ def run_chat_interface():
                 st.text(entry["answer"])
 
             # Actions under each assistant message
-            col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
+            col1, col2, col3, col4, space = st.columns([1, 1, 1, 1, 10])
             
             # Language-specific action button text
             copy_text = {
-                "English": "📋 Copy",
-                "Te Reo Māori": "📋 Kape",
-                "Tongan": "📋 Kope",
-                "Samoan": "📋 Kopi",
-                "中文 (Mandarin)": "📋 复制",
-                "العربية (Arabic)": "📋 نسخ",
-                "فارسی (Farsi)": "📋 کپی"
-            }.get(current_language, "📋 Copy")
+                "English": "📋",
+                "Te Reo Māori": "📋",
+                "Tongan": "📋",
+                "Samoan": "📋",
+                "中文 (Mandarin)": "📋",
+                "العربية (Arabic)": "📋",
+                "فارسی (Farsi)": "📋" 
+            }.get(current_language, "📋")
             
-            if col1.button(copy_text, key=f"copy_{idx}"):
+            if col1.button(copy_text, key=f"copy_{idx}", use_container_width=True, type="tertiary"):
                 st.session_state.last_button_click = "copy_message"  # Track this button click
                 escaped = json.dumps(entry["answer"])
                 components.html(
@@ -812,24 +811,24 @@ def run_chat_interface():
 
             # Language-specific button text for other actions
             regenerate_text = {
-                "English": "🔄 Regenerate",
-                "Te Reo Māori": "🔄 Whakahou",
-                "Tongan": "🔄 Fakahou",
-                "Samoan": "🔄 Toe Fausia",
-                "中文 (Mandarin)": "🔄 重新生成",
-                "العربية (Arabic)": "🔄 إعادة توليد",
-                "فارسی (Farsi)": "🔄 تولید مجدد"
-            }.get(current_language, "🔄 Regenerate")
+                "English": "🔄",
+                "Te Reo Māori": "🔄",
+                "Tongan": "🔄",
+                "Samoan": "🔄",
+                "中文 (Mandarin)": "🔄",
+                "العربية (Arabic)": "🔄",
+                "فارسی (Farsi)": "🔄"
+            }.get(current_language, "🔄")
             
-            if col2.button(regenerate_text, key=f"regen_{idx}"):
+            if col2.button(regenerate_text, key=f"regen_{idx}", use_container_width=True, type="tertiary"):
                 st.session_state.last_button_click = "regenerate_message"  # Track this button click
                 q = entry["question"]
-                r2, s2, sp2, ep2, t2 = generate_response(q)
-                src2 = "Unknown" if not s2 or s2 == "Unknown" else (f"{s2} (pp. {sp2}–{ep2})" if sp2 != "N/A" and ep2 != "N/A" else s2)
+                r2, s2, t2 = generate_response(q)
+                src2 = "Unknown" if not s2 or s2 == "Unknown" else s2
                 new_fmt = (
-                    f"{r2}\n\n**Source:** `{src2}`\n*Timestamp:* {t2}"
+                    f"{r2}\n\n**Source:** {src2}\n\n*Timestamp:* {t2}"
                     if st.session_state.markdown_mode
-                    else f"{r2}\n\nSource: {src2} | Timestamp: {t2}"
+                    else f"{r2}\n\nSource: {src2}\n\nTimestamp: {t2}"
                 )
                 st.session_state.chat_history.append({"question": q, "answer": new_fmt})
                 st.rerun()
@@ -855,11 +854,11 @@ def run_chat_interface():
                 "العربية (Arabic)": "فهمت!"
             }.get(current_language, "Got it!")
             
-            if col3.button("👍", key=f"like_{idx}"):
+            if col3.button("👍", key=f"like_{idx}", use_container_width=True, type="tertiary"):
                 st.session_state.last_button_click = "like_message"  # Track this button click
                 st.session_state.feedback.append((idx, True))
                 col3.success(thanks_text)
-            if col4.button("👎", key=f"dislike_{idx}"):
+            if col4.button("👎", key=f"dislike_{idx}", use_container_width=True, type="tertiary"):
                 st.session_state.last_button_click = "dislike_message"  # Track this button click
                 st.session_state.feedback.append((idx, False))
                 col4.warning(got_it_text)
@@ -907,13 +906,13 @@ def show_compliance_interface():
     with st.sidebar:
         st.markdown("## 📋 Compliance Tools")
         
-        if st.button("🏠 Return to Homepage"):
+        if st.button("🏠 Return to Homepage", use_container_width=True):
             st.session_state.show_compliance = False
             st.session_state.show_homepage = True
             st.session_state.last_button_click = "homepage"  # Track this button click
             st.rerun()
         
-        if st.button("💬 Back to Chat"):
+        if st.button("💬 Back to Chat", use_container_width=True):
             st.session_state.show_compliance = False
             st.session_state.last_button_click = "chat"  # Track this button click
             st.rerun()
@@ -1031,7 +1030,7 @@ def show_compliance_overview(checker):
                 
                 col1, col2 = st.columns(2)
                 with col1:
-                    if st.button(f"View Details", key=f"view_{assessment['id']}"):
+                    if st.button(f"View Details", key=f"view_{assessment['id']}", use_container_width=True):
                         # Update session state first
                         st.session_state.current_assessment_id = assessment['id']
                         st.session_state.compliance_view_mode = "gap_analysis"
@@ -1043,7 +1042,7 @@ def show_compliance_overview(checker):
                         # Force a rerun to ensure state is updated
                         st.rerun()
                 with col2:
-                    if st.button(f"🗑️ Delete", key=f"delete_{assessment['id']}", type="secondary"):
+                    if st.button(f"🗑️ Delete", key=f"delete_{assessment['id']}", type="secondary", use_container_width=True):
                         st.session_state.assessment_to_delete = assessment['id']
                         st.session_state.show_delete_confirmation = True
                         st.session_state.last_button_click = "overview"  # Track this button click
@@ -1065,7 +1064,7 @@ def show_compliance_overview(checker):
              
              col1, col2, col3 = st.columns([1, 1, 1])
              with col1:
-                 if st.button("❌ Cancel", key="cancel_delete"):
+                 if st.button("❌ Cancel", key="cancel_delete", use_container_width=True):
                      st.session_state.show_delete_confirmation = False
                      st.session_state.assessment_to_delete = None
                      st.session_state.last_button_click = "overview"  # Track this button click
@@ -1073,7 +1072,7 @@ def show_compliance_overview(checker):
                      st.session_state.previous_sidebar_mode = "Overview"
                      st.rerun()
              with col2:
-                 if st.button("🗑️ Delete", key="confirm_delete", type="primary"):
+                 if st.button("🗑️ Delete", key="confirm_delete", type="primary", use_container_width=True):
                      try:
                          # Call the delete method from ComplianceChecker
                          if hasattr(checker, 'delete_assessment'):
@@ -1150,7 +1149,7 @@ def show_assessments_list(checker):
                 with col4:
                     col4a, col4b = st.columns(2)
                     with col4a:
-                        if st.button("View Details", key=f"details_{assessment['id']}"):
+                        if st.button("View Details", key=f"details_{assessment['id']}", use_container_width=True):
                             st.session_state.current_assessment_id = assessment['id']
                             st.session_state.compliance_view_mode = "gap_analysis"
                             st.session_state.last_button_click = "gap_analysis"  # Track this button click
@@ -1158,7 +1157,7 @@ def show_assessments_list(checker):
                             st.session_state.previous_sidebar_mode = "Gap Analysis"
                             st.rerun()
                     with col4b:
-                        if st.button("🗑️", key=f"delete_details_{assessment['id']}", type="secondary", help="Delete this assessment"):
+                        if st.button("🗑️", key=f"delete_details_{assessment['id']}", type="secondary", help="Delete this assessment", use_container_width=True):
                             st.session_state.assessment_to_delete = assessment['id']
                             st.session_state.show_delete_confirmation = True
                             st.session_state.last_button_click = "view_assessments"  # Track this button click
@@ -1183,7 +1182,7 @@ def show_gap_analysis(checker):
     with col1:
         st.markdown("**Assessment Details**")
     with col2:
-        if st.button("← Back to Overview", key="back_to_overview"):
+        if st.button("← Back to Overview", key="back_to_overview", use_container_width=True):
             st.session_state.compliance_view_mode = "overview"
             st.session_state.previous_sidebar_mode = "Overview"
             st.rerun()
@@ -1192,7 +1191,7 @@ def show_gap_analysis(checker):
     if not st.session_state.current_assessment_id:
         st.warning("No assessment selected. Please select an assessment first.")
         st.info("Please select an assessment from the list first.")
-        if st.button("← Go Back to Overview", key="no_assessment_back"):
+        if st.button("← Go Back to Overview", key="no_assessment_back", use_container_width=True):
             st.session_state.compliance_view_mode = "overview"
             st.session_state.previous_sidebar_mode = "Overview"
             st.rerun()
@@ -1204,7 +1203,7 @@ def show_gap_analysis(checker):
         if not assessment:
             st.error("Assessment not found.")
             st.info("Please select a different assessment.")
-            if st.button("← Go Back to Overview", key="error_back"):
+            if st.button("← Go Back to Overview", key="error_back", use_container_width=True):
                 st.session_state.compliance_view_mode = "overview"
                 st.session_state.previous_sidebar_mode = "Overview"
                 st.rerun()
@@ -1212,7 +1211,7 @@ def show_gap_analysis(checker):
     except Exception as e:
         st.error(f"Error loading assessment: {str(e)}")
         st.info("Please try selecting a different assessment or go back to overview.")
-        if st.button("← Go Back to Overview", key="error_back"):
+        if st.button("← Go Back to Overview", key="error_back", use_container_width=True):
             st.session_state.compliance_view_mode = "overview"
             st.session_state.previous_sidebar_mode = "Overview"
             st.rerun()
@@ -1255,13 +1254,13 @@ def show_gap_analysis(checker):
         
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("🔄 Try to Refresh Assessment", key="refresh_assessment"):
+            if st.button("🔄 Try to Refresh Assessment", key="refresh_assessment", use_container_width=True):
                 st.info("Refreshing assessment data...")
                 # Don't rerun - just show a message
                 st.success("Assessment refreshed! Check if categories are now available.")
         
         with col2:
-            if st.button("← Go Back to Overview", key="incomplete_back"):
+            if st.button("← Go Back to Overview", key="incomplete_back", use_container_width=True):
                 st.session_state.compliance_view_mode = "overview"
                 st.session_state.previous_sidebar_mode = "Overview"
                 st.rerun()
@@ -1284,7 +1283,7 @@ def show_gap_analysis(checker):
     
     # Quick test section
     st.markdown("### 🧪 Quick Test")
-    if st.button("🔍 Test Assessment Data", key="test_assessment"):
+    if st.button("🔍 Test Assessment Data", key="test_assessment", use_container_width=True):
         st.info("Testing assessment data structure...")
         st.json({
             "has_categories": bool(assessment.get('categories')),
@@ -1304,7 +1303,7 @@ def show_gap_analysis(checker):
     st.markdown("---")
     
     # Generate gap analysis
-    if st.button("🔄 Generate Gap Analysis"):
+    if st.button("🔄 Generate Gap Analysis", use_container_width=True):
         st.session_state.last_button_click = "gap_analysis"  # Track this button click
         
         # Show loading state with timeout warning
@@ -1395,7 +1394,7 @@ def show_gap_analysis(checker):
                     )
                 
                 with col3:
-                    if st.button("Update", key=f"update_{cat_idx}_{req_idx}"):
+                    if st.button("Update", key=f"update_{cat_idx}_{req_idx}", use_container_width=True):
                         st.session_state.last_button_click = "gap_analysis"  # Track this button click
                         checker.update_requirement_status(
                             assessment['id'], cat_idx, req_idx, status, 
@@ -1442,7 +1441,7 @@ with st.container():
 
         with right:
             if not st.session_state.authenticated:
-                with st.popover("🔐 Log in / Sign up"):
+                with st.popover("Log in", icon="🔒"):
                     mode = st.radio("Choose", ["Login", "Sign up"], horizontal=True, key="auth_mode_pop")
 
                     if mode == "Login":
@@ -1485,7 +1484,7 @@ with st.container():
                 st.markdown(f"<div class='right hello'>Hello, <b>{name}</b></div>", unsafe_allow_html=True)
 
                 col1, col2 = st.columns([1, 1])
-                if col1.button("Log out", key="logout_top"):
+                if col1.button("Log out", key="logout_top", use_container_width=True):
                     # Log out user and clear user-specific session data
                     st.session_state.authenticated = False
                     st.session_state.email = None

@@ -1,3 +1,7 @@
+[server]
+runOnSave = true
+[client]
+toolbarMode = "minimal"
 [theme]
 base="light"
 primaryColor="#009688"               # Voxta green

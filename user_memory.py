@@ -39,7 +39,7 @@ def load_session(session_name, username=None):
     data = _load_file(path)
     return data.get(session_name, {}).get("history", [])
 
-def save_to_history(question, answer, source, pages, ts, session_name="default", username=None, chat_history=None):
+def save_to_history(question, answer, source, ts, session_name="default", username=None, chat_history=None):
     """
     Save a single QA or entire chat_history.
     - If chat_history is provided, it replaces the session history.
@@ -62,7 +62,6 @@ def save_to_history(question, answer, source, pages, ts, session_name="default",
                 "question": question,
                 "answer": answer,
                 "source": source,
-                "pages": pages,
                 "timestamp": ts or now
             }
             sess.setdefault("history", []).append(entry)
